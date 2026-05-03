@@ -115,6 +115,50 @@
 </div>
 {% endif %}
 
+<!-- Mandatory Implants Checklist for Primary Surgeries -->
+{% if surgery.surgery_type == 'Primary' %}
+<div class="card mt-4 border-warning">
+    <div class="card-header bg-warning text-dark">
+        <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Mandatory Implants Checklist</h6>
+    </div>
+    <div class="card-body">
+        {% if surgery.joint == 'Hip' %}
+            <div class="row">
+                <div class="col-md-3">
+                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Acetabular Shell')|list %}bg-success{% else %}bg-danger{% endif %}">Acetabular Shell</span>
+                </div>
+                <div class="col-md-3">
+                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Acetabular Liner')|list %}bg-success{% else %}bg-danger{% endif %}">Acetabular Liner</span>
+                </div>
+                <div class="col-md-3">
+                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Femoral Stem')|list %}bg-success{% else %}bg-danger{% endif %}">Femoral Stem</span>
+                </div>
+                <div class="col-md-3">
+                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Femoral Head')|list %}bg-success{% else %}bg-danger{% endif %}">Femoral Head</span>
+                </div>
+            </div>
+            <small class="text-muted">All 4 components are required for Primary Hip Arthroplasty.</small>
+        {% elif surgery.joint == 'Knee' %}
+            <div class="row">
+                <div class="col-md-3">
+                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Femoral Component (Knee)')|list %}bg-success{% else %}bg-danger{% endif %}">Femoral Component</span>
+                </div>
+                <div class="col-md-3">
+                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Tibial Component')|list %}bg-success{% else %}bg-danger{% endif %}">Tibial Component</span>
+                </div>
+                <div class="col-md-3">
+                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Tibial Liner')|list %}bg-success{% else %}bg-danger{% endif %}">Tibial Liner</span>
+                </div>
+                <div class="col-md-3">
+                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Patellar Component')|list %}bg-success{% else %}bg-secondary{% endif %}">Patellar Component (Optional)</span>
+                </div>
+            </div>
+            <small class="text-muted">Femoral, Tibial, and Liner are required. Patellar is optional for Primary Knee.</small>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 <!-- Add Implant Modal with Catalog Search -->
 <div class="modal fade" id="addImplantModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -148,42 +192,57 @@
                     <hr>
                     
                     <div class="row g-3">
+                        <!-- Reference Number with Search -->
+                        <div class="col-12">
+                            <label class="form-label"><strong>Implant Reference / Catalog Number</strong> <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="text" name="reference_number" id="reference_number" class="form-control" placeholder="Type catalog number (e.g. STR-ACC-5, ZIM-PER-7)" required>
+                                <button class="btn btn-outline-success" type="button" onclick="searchImplantCatalog()">
+                                    <i class="bi bi-search"></i> Search Catalog
+                                </button>
+                            </div>
+                            <small class="text-muted">Enter or search the reference number — all other details will auto-populate</small>
+                        </div>
+                        
+                        <!-- Search Results -->
+                        <div id="searchResults" class="col-12" style="display: none;">
+                            <label class="form-label small">Search Results (click to select):</label>
+                            <div id="searchResultsList" class="list-group" style="max-height: 120px; overflow-y: auto;"></div>
+                        </div>
+                        
+                        <hr class="my-2">
+                        
+                        <!-- Auto-filled fields (read-only) -->
                         <div class="col-md-6">
-                            <label class="form-label">Implant Type <span class="text-danger">*</span></label>
-                            <select name="implant_type_id" id="implant_type_id" class="form-select" required>
-                                <option value="">Select type...</option>
-                                {% for it in lookups.implant_types %}
-                                <option value="{{ it.id }}">{{ it.name }}</option>
-                                {% endfor %}
-                            </select>
+                            <label class="form-label">Implant Type</label>
+                            <input type="text" id="implant_type_display" class="form-control bg-light" readonly>
+                            <input type="hidden" name="implant_type_id" id="implant_type_id">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Manufacturer <span class="text-danger">*</span></label>
-                            <select name="manufacturer_id" id="manufacturer_id" class="form-select" required>
-                                <option value="">Select manufacturer...</option>
-                                {% for m in lookups.manufacturers %}
-                                <option value="{{ m.id }}">{{ m.name }}</option>
-                                {% endfor %}
-                            </select>
+                            <label class="form-label">Manufacturer</label>
+                            <input type="text" id="manufacturer_display" class="form-control bg-light" readonly>
+                            <input type="hidden" name="manufacturer_id" id="manufacturer_id">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Model</label>
-                            <input type="text" name="model" id="model" class="form-control" placeholder="e.g. Accolade II">
+                            <label class="form-label">Model / Design</label>
+                            <input type="text" id="model_display" class="form-control bg-light" readonly>
+                            <input type="hidden" name="model" id="model">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Reference / Catalog Number <span class="text-danger">*</span></label>
-                            <input type="text" name="reference_number" id="reference_number" class="form-control" placeholder="e.g. STR-ACC-5" required>
-                        </div>
-                        <div class="col-md-4">
                             <label class="form-label">Size</label>
-                            <input type="text" name="size" id="size" class="form-control" placeholder="Size 7 / 54mm">
+                            <input type="text" id="size_display" class="form-control bg-light" readonly>
+                            <input type="hidden" name="size" id="size">
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Lot Number</label>
+                        
+                        <hr class="my-2">
+                        
+                        <!-- Manual Entry -->
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>Lot Number</strong> <span class="text-danger">*</span></label>
                             <input type="text" name="lot_number" class="form-control" placeholder="LOT-39281" required>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Notes</label>
+                        <div class="col-md-6">
+                            <label class="form-label">Notes (optional)</label>
                             <input type="text" name="notes" class="form-control" placeholder="Additional info">
                         </div>
                     </div>
@@ -242,15 +301,18 @@ function searchImplantCatalog() {
 }
 
 function selectImplantFromCatalog(item) {
-    // Auto-fill the form with all available data from catalog
+    // Auto-fill hidden fields + display fields
     document.getElementById('reference_number').value = item.catalog_number || '';
-    document.getElementById('model').value = item.model || '';
     document.getElementById('implant_type_id').value = item.implant_type_id || '';
     document.getElementById('manufacturer_id').value = item.manufacturer_id || '';
+    document.getElementById('model').value = item.model || '';
     document.getElementById('size').value = item.size || '';
     
-    // If we had design/fixation/side fields in the form, we would fill them here too
-    // For now they are stored in the catalog and copied on selection
+    // Update display fields (read-only)
+    document.getElementById('implant_type_display').value = item.implant_type || '';
+    document.getElementById('manufacturer_display').value = item.manufacturer || '';
+    document.getElementById('model_display').value = item.model || (item.design ? item.design : '');
+    document.getElementById('size_display').value = item.size || '';
     
     // Hide search results
     document.getElementById('searchResults').style.display = 'none';
@@ -259,7 +321,7 @@ function selectImplantFromCatalog(item) {
     const toast = document.createElement('div');
     toast.className = 'alert alert-success py-1 px-2 mt-2 mb-0';
     toast.style.fontSize = '0.85rem';
-    toast.innerHTML = `✓ Auto-filled: ${item.catalog_number} — ${item.model}`;
+    toast.innerHTML = `✓ Auto-filled from catalog: ${item.catalog_number}`;
     document.getElementById('addImplantForm').prepend(toast);
     setTimeout(() => toast.remove(), 3000);
 }
