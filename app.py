@@ -127,6 +127,21 @@ class Implant(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+
+class ImplantCatalog(db.Model):
+    """Master catalog of available implants searchable by catalog number"""
+    __tablename__ = 'implant_catalog'
+    id = db.Column(db.Integer, primary_key=True)
+    catalog_number = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    implant_type_id = db.Column(db.Integer, db.ForeignKey('implant_types.id'))
+    manufacturer_id = db.Column(db.Integer, db.ForeignKey('manufacturers.id'))
+    model = db.Column(db.String(150))
+    description = db.Column(db.Text)
+    
+    implant_type = db.relationship('ImplantType', backref='catalog_entries')
+    manufacturer = db.relationship('Manufacturer', backref='catalog_entries')
+
+
 # ==================== HELPER FUNCTIONS ====================
 
 def seed_initial_data():
@@ -135,24 +150,23 @@ def seed_initial_data():
         return  # Already seeded
 
     # Lookups
-    genders = ['Male', 'Female', 'Non-binary', 'Prefer not to say']
+    genders = ['Male', 'Female']
     for g in genders:
         db.session.add(Gender(name=g))
 
     procedure_types = [
-        'Total Hip Arthroplasty', 'Total Knee Arthroplasty', 'Partial Knee Replacement',
-        'Spinal Fusion (Lumbar)', 'Spinal Fusion (Cervical)', 'ACL Reconstruction',
-        'Rotator Cuff Repair', 'Shoulder Arthroplasty', 'Carpal Tunnel Release',
-        'Hip Resurfacing', 'Ankle Arthrodesis'
+        'Total Hip Arthroplasty (THA)',
+        'Revision Total Hip Arthroplasty',
+        'Total Knee Arthroplasty (TKA)',
+        'Revision Total Knee Arthroplasty',
+        'Unicompartmental Knee Arthroplasty (UKA)'
     ]
     for pt in procedure_types:
         db.session.add(ProcedureType(name=pt))
 
     implant_types = [
-        'Femoral Stem', 'Acetabular Cup', 'Femoral Head', 'Tibial Tray',
-        'Femoral Component (Knee)', 'Polyethylene Insert', 'Patellar Button',
-        'Pedicle Screw', 'Rod', 'Interbody Cage', 'Suture Anchor',
-        'Glenoid Component', 'Humeral Stem', 'Humeral Head'
+        'Acetabular Shell', 'Acetabular Liner', 'Femoral Stem', 'Femoral Head',
+        'Femoral Component (Knee)', 'Tibial Component', 'Tibial Liner', 'Patellar Component'
     ]
     for it in implant_types:
         db.session.add(ImplantType(name=it))
@@ -227,27 +241,27 @@ def seed_initial_data():
         },
         {
             'patient_id': 1, 'surgery_date': date(2025, 1, 22),
-            'procedure_type_id': 2, 'surgeon_id': 1, 'hospital_id': 1,
+            'procedure_type_id': 3, 'surgeon_id': 1, 'hospital_id': 1,
             'operating_room': 'OR-2', 'duration_minutes': 128,
             'notes': 'Bilateral TKA staged. Left knee first. Good ROM achieved.'
         },
         {
             'patient_id': 2, 'surgery_date': date(2024, 6, 10),
-            'procedure_type_id': 5, 'surgeon_id': 2, 'hospital_id': 2,
+            'procedure_type_id': 1, 'surgeon_id': 2, 'hospital_id': 2,
             'operating_room': 'OR-5', 'duration_minutes': 195,
-            'notes': 'C5-C6 ACDF with allograft and plate. No complications.'
+            'notes': 'Revision THA with acetabular bone grafting.'
         },
         {
             'patient_id': 3, 'surgery_date': date(2024, 9, 5),
-            'procedure_type_id': 6, 'surgeon_id': 3, 'hospital_id': 3,
+            'procedure_type_id': 3, 'surgeon_id': 3, 'hospital_id': 3,
             'operating_room': 'OR-1', 'duration_minutes': 87,
-            'notes': 'Autograft BTB. Stable Lachman post-op.'
+            'notes': 'Primary TKA, cruciate retaining.'
         },
         {
             'patient_id': 4, 'surgery_date': date(2025, 2, 28),
-            'procedure_type_id': 7, 'surgeon_id': 4, 'hospital_id': 4,
+            'procedure_type_id': 5, 'surgeon_id': 4, 'hospital_id': 4,
             'operating_room': 'OR-4', 'duration_minutes': 112,
-            'notes': 'Arthroscopic double-row repair. Good tendon quality.'
+            'notes': 'UKA medial compartment, good alignment.'
         }
     ]
 
@@ -256,25 +270,24 @@ def seed_initial_data():
         db.session.add(surgery)
     db.session.commit()
 
-    # Sample Implants
+    # Sample Implants (updated for new simplified implant types)
     sample_implants = [
-        # For surgery 1 (Hip)
-        {'surgery_id': 1, 'implant_type_id': 1, 'manufacturer_id': 1, 'model': 'Accolade II', 'serial_number': 'STR-2024-78432', 'size': 'Size 5', 'lot_number': 'LOT-39281'},
-        {'surgery_id': 1, 'implant_type_id': 2, 'manufacturer_id': 1, 'model': 'Trident II', 'serial_number': 'STR-2024-78433', 'size': '54mm', 'lot_number': 'LOT-39282'},
-        {'surgery_id': 1, 'implant_type_id': 3, 'manufacturer_id': 1, 'model': 'LFIT Anatomic', 'serial_number': 'STR-2024-78434', 'size': '32mm', 'lot_number': 'LOT-39283'},
-        # For surgery 2 (Knee)
-        {'surgery_id': 2, 'implant_type_id': 4, 'manufacturer_id': 2, 'model': 'Persona', 'serial_number': 'ZIM-2025-11234', 'size': 'Size 7', 'lot_number': 'LOT-55102'},
-        {'surgery_id': 2, 'implant_type_id': 5, 'manufacturer_id': 2, 'model': 'Persona CR', 'serial_number': 'ZIM-2025-11235', 'size': 'Size 7', 'lot_number': 'LOT-55103'},
-        {'surgery_id': 2, 'implant_type_id': 6, 'manufacturer_id': 2, 'model': 'Persona PS', 'serial_number': 'ZIM-2025-11236', 'size': '10mm', 'lot_number': 'LOT-55104'},
-        # For surgery 3 (Spine)
-        {'surgery_id': 3, 'implant_type_id': 8, 'manufacturer_id': 5, 'model': 'CD Horizon', 'serial_number': 'MDT-2024-55678', 'size': '5.5mm x 45mm', 'lot_number': 'LOT-88321'},
-        {'surgery_id': 3, 'implant_type_id': 9, 'manufacturer_id': 5, 'model': 'CD Horizon', 'serial_number': 'MDT-2024-55679', 'size': '5.5mm x 50mm', 'lot_number': 'LOT-88322'},
-        {'surgery_id': 3, 'implant_type_id': 10, 'manufacturer_id': 6, 'model': 'CoRoent', 'serial_number': 'NUV-2024-33445', 'size': '12mm', 'lot_number': 'LOT-44719'},
-        # For surgery 4 (ACL)
-        {'surgery_id': 4, 'implant_type_id': 11, 'manufacturer_id': 8, 'model': 'SwiveLock', 'serial_number': 'ART-2024-99112', 'size': '4.75mm', 'lot_number': 'LOT-66234'},
-        # For surgery 5 (Shoulder)
-        {'surgery_id': 5, 'implant_type_id': 12, 'manufacturer_id': 3, 'model': 'Global Unite', 'serial_number': 'DPS-2025-22331', 'size': '44mm', 'lot_number': 'LOT-77890'},
-        {'surgery_id': 5, 'implant_type_id': 13, 'manufacturer_id': 3, 'model': 'Global Unite', 'serial_number': 'DPS-2025-22332', 'size': '12mm x 130mm', 'lot_number': 'LOT-77891'},
+        # Surgery 1 - Hip (THA)
+        {'surgery_id': 1, 'implant_type_id': 3, 'manufacturer_id': 1, 'model': 'Accolade II', 'serial_number': 'STR-2024-78432', 'size': 'Size 5', 'lot_number': 'LOT-39281'},
+        {'surgery_id': 1, 'implant_type_id': 1, 'manufacturer_id': 1, 'model': 'Trident II', 'serial_number': 'STR-2024-78433', 'size': '54mm', 'lot_number': 'LOT-39282'},
+        {'surgery_id': 1, 'implant_type_id': 4, 'manufacturer_id': 1, 'model': 'LFIT Anatomic', 'serial_number': 'STR-2024-78434', 'size': '32mm', 'lot_number': 'LOT-39283'},
+        # Surgery 2 - Knee (TKA)
+        {'surgery_id': 2, 'implant_type_id': 5, 'manufacturer_id': 2, 'model': 'Persona CR', 'serial_number': 'ZIM-2025-11234', 'size': 'Size 7', 'lot_number': 'LOT-55102'},
+        {'surgery_id': 2, 'implant_type_id': 6, 'manufacturer_id': 2, 'model': 'Persona Tibial', 'serial_number': 'ZIM-2025-11235', 'size': 'Size 7', 'lot_number': 'LOT-55103'},
+        {'surgery_id': 2, 'implant_type_id': 7, 'manufacturer_id': 2, 'model': 'Persona PS Insert', 'serial_number': 'ZIM-2025-11236', 'size': '10mm', 'lot_number': 'LOT-55104'},
+        # Surgery 3 - Hip Revision
+        {'surgery_id': 3, 'implant_type_id': 1, 'manufacturer_id': 3, 'model': 'Pinnacle', 'serial_number': 'DPS-2024-99112', 'size': '54mm', 'lot_number': 'LOT-88321'},
+        {'surgery_id': 3, 'implant_type_id': 2, 'manufacturer_id': 3, 'model': 'Marathon', 'serial_number': 'DPS-2024-99113', 'size': '54mm', 'lot_number': 'LOT-88322'},
+        # Surgery 4 - Knee
+        {'surgery_id': 4, 'implant_type_id': 5, 'manufacturer_id': 2, 'model': 'Persona CR', 'serial_number': 'ZIM-2024-33445', 'size': 'Size 6', 'lot_number': 'LOT-44719'},
+        {'surgery_id': 4, 'implant_type_id': 8, 'manufacturer_id': 2, 'model': 'Persona Patella', 'serial_number': 'ZIM-2024-33446', 'size': '32mm', 'lot_number': 'LOT-44720'},
+        # Surgery 5 - UKA
+        {'surgery_id': 5, 'implant_type_id': 5, 'manufacturer_id': 4, 'model': 'Oxford Partial', 'serial_number': 'SN-2025-22331', 'size': 'Size 3', 'lot_number': 'LOT-77890'},
     ]
 
     for i_data in sample_implants:
@@ -282,6 +295,27 @@ def seed_initial_data():
         db.session.add(implant)
 
     db.session.commit()
+
+    # Seed Implant Catalog (Master list searchable by catalog number)
+    if ImplantCatalog.query.first() is None:
+        catalog_data = [
+            # Hip - Stryker
+            {'catalog_number': 'STR-ACC-5', 'implant_type_id': 3, 'manufacturer_id': 1, 'model': 'Accolade II', 'description': 'Cementless femoral stem, size 5'},
+            {'catalog_number': 'STR-TRI-54', 'implant_type_id': 1, 'manufacturer_id': 1, 'model': 'Trident II', 'description': 'Acetabular shell, 54mm'},
+            {'catalog_number': 'STR-LFIT-32', 'implant_type_id': 4, 'manufacturer_id': 1, 'model': 'LFIT Anatomic', 'description': 'Femoral head, 32mm, ceramic'},
+            # Knee - Zimmer Biomet
+            {'catalog_number': 'ZIM-PER-7', 'implant_type_id': 5, 'manufacturer_id': 2, 'model': 'Persona CR', 'description': 'Femoral component, size 7, CR'},
+            {'catalog_number': 'ZIM-TIB-7', 'implant_type_id': 6, 'manufacturer_id': 2, 'model': 'Persona Tibial', 'description': 'Tibial component, size 7'},
+            {'catalog_number': 'ZIM-INS-10', 'implant_type_id': 7, 'manufacturer_id': 2, 'model': 'Persona PS Insert', 'description': 'Tibial liner, 10mm, PS'},
+            {'catalog_number': 'ZIM-PAT-32', 'implant_type_id': 8, 'manufacturer_id': 2, 'model': 'Persona Patella', 'description': 'Patellar component, 32mm'},
+            # Hip - DePuy Synthes
+            {'catalog_number': 'DPS-PIN-54', 'implant_type_id': 1, 'manufacturer_id': 3, 'model': 'Pinnacle', 'description': 'Acetabular shell, 54mm'},
+            {'catalog_number': 'DPS-ART-32', 'implant_type_id': 4, 'manufacturer_id': 3, 'model': 'Articul/Eze', 'description': 'Femoral head, 32mm'},
+        ]
+        for c in catalog_data:
+            db.session.add(ImplantCatalog(**c))
+        db.session.commit()
+
     print("✓ Initial data seeded successfully")
 
 def get_all_lookups():
@@ -702,6 +736,33 @@ def api_patient_surgeries(patient_id):
         'procedure': s.procedure_type.name if s.procedure_type else 'N/A',
         'surgeon': s.surgeon.name if s.surgeon else 'N/A'
     } for s in surgeries])
+
+# ---------- Implant Catalog Search API ----------
+@app.route('/api/implant-catalog/search')
+def search_implant_catalog():
+    """Search implant catalog by catalog number or model (for auto-fill when adding implants)"""
+    q = request.args.get('q', '').strip()
+    if not q or len(q) < 2:
+        return jsonify([])
+    
+    results = ImplantCatalog.query.filter(
+        or_(
+            ImplantCatalog.catalog_number.ilike(f'%{q}%'),
+            ImplantCatalog.model.ilike(f'%{q}%')
+        )
+    ).limit(15).all()
+    
+    return jsonify([{
+        'id': c.id,
+        'catalog_number': c.catalog_number,
+        'implant_type_id': c.implant_type_id,
+        'implant_type': c.implant_type.name if c.implant_type else '',
+        'manufacturer_id': c.manufacturer_id,
+        'manufacturer': c.manufacturer.name if c.manufacturer else '',
+        'model': c.model or '',
+        'description': c.description or ''
+    } for c in results])
+
 
 # ---------- Health Check (for hosting platforms) ----------
 @app.route('/health')
