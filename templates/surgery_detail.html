@@ -115,7 +115,7 @@
 </div>
 {% endif %}
 
-<!-- Add Implant Modal -->
+<!-- Add Implant Modal with Catalog Search -->
 <div class="modal fade" id="addImplantModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -123,13 +123,34 @@
                 <h5 class="modal-title"><i class="bi bi-cpu me-2"></i>Add Implant to Surgery</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('add_implant') }}">
+            <form method="POST" action="{{ url_for('add_implant') }}" id="addImplantForm">
                 <input type="hidden" name="surgery_id" value="{{ surgery.id }}">
                 <div class="modal-body">
+                    
+                    <!-- Search by Reference Number -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Search Implant Catalog</strong></label>
+                        <div class="input-group">
+                            <input type="text" id="implantSearch" class="form-control" placeholder="Type catalog number or model (e.g. STR-ACC-5, Persona, ZIM...)">
+                            <button class="btn btn-outline-primary" type="button" onclick="searchImplantCatalog()">
+                                <i class="bi bi-search"></i> Search
+                            </button>
+                        </div>
+                        <small class="text-muted">Search the master implant list — select a result to auto-fill the form</small>
+                    </div>
+                    
+                    <!-- Search Results -->
+                    <div id="searchResults" class="mb-3" style="display: none;">
+                        <label class="form-label">Search Results (click to select):</label>
+                        <div id="searchResultsList" class="list-group" style="max-height: 150px; overflow-y: auto;"></div>
+                    </div>
+                    
+                    <hr>
+                    
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Implant Type <span class="text-danger">*</span></label>
-                            <select name="implant_type_id" class="form-select" required>
+                            <select name="implant_type_id" id="implant_type_id" class="form-select" required>
                                 <option value="">Select type...</option>
                                 {% for it in lookups.implant_types %}
                                 <option value="{{ it.id }}">{{ it.name }}</option>
@@ -138,7 +159,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Manufacturer <span class="text-danger">*</span></label>
-                            <select name="manufacturer_id" class="form-select" required>
+                            <select name="manufacturer_id" id="manufacturer_id" class="form-select" required>
                                 <option value="">Select manufacturer...</option>
                                 {% for m in lookups.manufacturers %}
                                 <option value="{{ m.id }}">{{ m.name }}</option>
@@ -147,20 +168,19 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Model</label>
-                            <input type="text" name="model" class="form-control" placeholder="e.g. Accolade II">
+                            <input type="text" name="model" id="model" class="form-control" placeholder="e.g. Accolade II">
                         </div>
-                        <div class="col-md-12 mb-3">
+                        <div class="col-md-6">
                             <label class="form-label">Reference / Catalog Number <span class="text-danger">*</span></label>
-                            <input type="text" name="reference_number" class="form-control" placeholder="e.g. STR-ACC-5 or ZIM-PER-7" required>
-                            <small class="text-muted">Enter the catalog number — other details will auto-populate from the master implant list (feature coming in next update)</small>
+                            <input type="text" name="reference_number" id="reference_number" class="form-control" placeholder="e.g. STR-ACC-5" required>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Size</label>
-                            <input type="text" name="size" class="form-control" placeholder="Size 7 / 54mm">
+                            <input type="text" name="size" id="size" class="form-control" placeholder="Size 7 / 54mm">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Lot Number</label>
-                            <input type="text" name="lot_number" class="form-control" placeholder="LOT-39281">
+                            <input type="text" name="lot_number" class="form-control" placeholder="LOT-39281" required>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Notes</label>
@@ -176,6 +196,84 @@
         </div>
     </div>
 </div>
+
+<script>
+// Implant Catalog Search + Auto-fill
+function searchImplantCatalog() {
+    const query = document.getElementById('implantSearch').value.trim();
+    if (!query || query.length < 2) {
+        alert('Please enter at least 2 characters to search');
+        return;
+    }
+    
+    fetch(`/api/implant-catalog/search?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            const resultsDiv = document.getElementById('searchResults');
+            const listDiv = document.getElementById('searchResultsList');
+            listDiv.innerHTML = '';
+            
+            if (data.length === 0) {
+                listDiv.innerHTML = '<div class="list-group-item text-muted">No implants found. Try a different search term.</div>';
+            } else {
+                data.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'list-group-item list-group-item-action';
+                    div.innerHTML = `
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>${item.catalog_number}</strong> — ${item.model || ''}
+                                <br><small class="text-muted">${item.implant_type} | ${item.manufacturer}</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-success">Select</button>
+                        </div>
+                    `;
+                    div.querySelector('button').onclick = () => selectImplantFromCatalog(item);
+                    listDiv.appendChild(div);
+                });
+            }
+            resultsDiv.style.display = 'block';
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Error searching catalog. Please try again.');
+        });
+}
+
+function selectImplantFromCatalog(item) {
+    // Auto-fill the form
+    document.getElementById('reference_number').value = item.catalog_number || '';
+    document.getElementById('model').value = item.model || '';
+    document.getElementById('implant_type_id').value = item.implant_type_id || '';
+    document.getElementById('manufacturer_id').value = item.manufacturer_id || '';
+    
+    // Hide search results
+    document.getElementById('searchResults').style.display = 'none';
+    
+    // Optional: show a toast or message
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-success py-1 px-2 mt-2 mb-0';
+    toast.style.fontSize = '0.85rem';
+    toast.innerHTML = `✓ Auto-filled from catalog: ${item.catalog_number}`;
+    document.getElementById('addImplantForm').prepend(toast);
+    setTimeout(() => toast.remove(), 2500);
+}
+
+// Allow Enter key to trigger search
+document.getElementById('implantSearch')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        searchImplantCatalog();
+    }
+});
+
+function toggleRevisionReasonEdit(select) {
+    const group = document.getElementById('revision_reason_edit_group');
+    if (group) {
+        group.style.display = (select.value === 'Revision') ? 'block' : 'none';
+    }
+}
+</script>
 
 <!-- Edit Surgery Modal -->
 <div class="modal fade" id="editSurgeryModal" tabindex="-1">
@@ -198,6 +296,43 @@
                                 {% for pt in lookups.procedure_types %}
                                 <option value="{{ pt.id }}" {% if surgery.procedure_type_id == pt.id %}selected{% endif %}>{{ pt.name }}</option>
                                 {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- New Orthopedic Fields -->
+                        <div class="col-md-3">
+                            <label class="form-label">Joint</label>
+                            <select name="joint" class="form-select">
+                                <option value="">—</option>
+                                <option value="Hip" {% if surgery.joint == 'Hip' %}selected{% endif %}>Hip</option>
+                                <option value="Knee" {% if surgery.joint == 'Knee' %}selected{% endif %}>Knee</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Side</label>
+                            <select name="side" class="form-select">
+                                <option value="">—</option>
+                                <option value="Left" {% if surgery.side == 'Left' %}selected{% endif %}>Left</option>
+                                <option value="Right" {% if surgery.side == 'Right' %}selected{% endif %}>Right</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Surgery Type</label>
+                            <select name="surgery_type" class="form-select" onchange="toggleRevisionReasonEdit(this)">
+                                <option value="">—</option>
+                                <option value="Primary" {% if surgery.surgery_type == 'Primary' %}selected{% endif %}>Primary</option>
+                                <option value="Revision" {% if surgery.surgery_type == 'Revision' %}selected{% endif %}>Revision</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3" id="revision_reason_edit_group" style="display: {% if surgery.surgery_type == 'Revision' %}block{% else %}none{% endif %};">
+                            <label class="form-label">Revision Reason</label>
+                            <select name="revision_reason" class="form-select">
+                                <option value="">—</option>
+                                <option value="Aseptic" {% if surgery.revision_reason == 'Aseptic' %}selected{% endif %}>Aseptic Loosening</option>
+                                <option value="Infected" {% if surgery.revision_reason == 'Infected' %}selected{% endif %}>Periprosthetic Joint Infection</option>
+                                <option value="Fracture" {% if surgery.revision_reason == 'Fracture' %}selected{% endif %}>Periprosthetic Fracture</option>
+                                <option value="Instability" {% if surgery.revision_reason == 'Instability' %}selected{% endif %}>Instability</option>
+                                <option value="Other" {% if surgery.revision_reason == 'Other' %}selected{% endif %}>Other</option>
                             </select>
                         </div>
                         <div class="col-md-6">

@@ -142,6 +142,43 @@
                                 {% endfor %}
                             </select>
                         </div>
+                        
+                        <!-- New Orthopedic Fields -->
+                        <div class="col-md-3">
+                            <label class="form-label">Joint <span class="text-danger">*</span></label>
+                            <select name="joint" class="form-select" required>
+                                <option value="">Select...</option>
+                                <option value="Hip">Hip</option>
+                                <option value="Knee">Knee</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Side <span class="text-danger">*</span></label>
+                            <select name="side" class="form-select" required>
+                                <option value="">Select...</option>
+                                <option value="Left">Left</option>
+                                <option value="Right">Right</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Surgery Type <span class="text-danger">*</span></label>
+                            <select name="surgery_type" class="form-select" required onchange="toggleRevisionReason(this)">
+                                <option value="">Select...</option>
+                                <option value="Primary">Primary</option>
+                                <option value="Revision">Revision</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3" id="revision_reason_group" style="display: none;">
+                            <label class="form-label">Revision Reason</label>
+                            <select name="revision_reason" class="form-select">
+                                <option value="">Select...</option>
+                                <option value="Aseptic">Aseptic Loosening</option>
+                                <option value="Infected">Periprosthetic Joint Infection</option>
+                                <option value="Fracture">Periprosthetic Fracture</option>
+                                <option value="Instability">Instability</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Surgeon</label>
                             <select name="surgeon_id" class="form-select">
@@ -302,5 +339,14 @@
     </div>
 </div>
 {% endfor %}
+
+<script>
+function toggleRevisionReason(select) {
+    const group = document.getElementById('revision_reason_group');
+    if (group) {
+        group.style.display = (select.value === 'Revision') ? 'block' : 'none';
+    }
+}
+</script>
 
 {% endblock %}

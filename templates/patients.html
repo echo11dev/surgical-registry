@@ -140,12 +140,50 @@
                             <input type="text" name="last_name" class="form-control" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Gender <span class="text-danger">*</span></label>
+                            <label class="form-label">Sex <span class="text-danger">*</span></label>
                             <select name="gender_id" class="form-select" required>
-                                <option value="">Select gender...</option>
+                                <option value="">Select sex...</option>
                                 {% for gender in lookups.genders %}
                                 <option value="{{ gender.id }}">{{ gender.name }}</option>
                                 {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Weight (kg)</label>
+                            <input type="number" step="0.1" name="weight_kg" id="weight_kg" class="form-control" placeholder="70.5" oninput="calculateBMI()">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Height (cm)</label>
+                            <input type="number" step="0.1" name="height_cm" id="height_cm" class="form-control" placeholder="175" oninput="calculateBMI()">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">BMI</label>
+                            <input type="text" id="bmi_display" class="form-control" placeholder="—" readonly>
+                            <small class="text-muted">Auto-calculated</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Age</label>
+                            <input type="text" id="age_display" class="form-control" placeholder="—" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Race</label>
+                            <select name="race" class="form-select">
+                                <option value="">Select race...</option>
+                                <option value="White">White</option>
+                                <option value="Black or African American">Black or African American</option>
+                                <option value="Asian">Asian</option>
+                                <option value="American Indian or Alaska Native">American Indian or Alaska Native</option>
+                                <option value="Native Hawaiian or Other Pacific Islander">Native Hawaiian or Other Pacific Islander</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ethnicity</label>
+                            <select name="ethnicity" class="form-select">
+                                <option value="">Select ethnicity...</option>
+                                <option value="Hispanic or Latino">Hispanic or Latino</option>
+                                <option value="Not Hispanic or Latino">Not Hispanic or Latino</option>
+                                <option value="Unknown">Unknown / Not Reported</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -222,5 +260,32 @@
     </div>
 </div>
 {% endfor %}
+
+<script>
+function calculateBMI() {
+    const weight = parseFloat(document.getElementById('weight_kg')?.value);
+    const height = parseFloat(document.getElementById('height_cm')?.value);
+    const bmiField = document.getElementById('bmi_display');
+    
+    if (weight && height && height > 0) {
+        const bmi = (weight / ((height / 100) ** 2)).toFixed(1);
+        if (bmiField) bmiField.value = bmi;
+    } else {
+        if (bmiField) bmiField.value = '—';
+    }
+}
+
+// Also calculate age from DOB (simple version for display)
+document.querySelectorAll('input[name="dob"]').forEach(input => {
+    input.addEventListener('change', function() {
+        const dob = new Date(this.value);
+        const ageField = document.getElementById('age_display');
+        if (ageField && dob) {
+            const age = Math.floor((new Date() - dob) / (365.25 * 24 * 60 * 60 * 1000));
+            ageField.value = age + ' years';
+        }
+    });
+});
+</script>
 
 {% endblock %}
