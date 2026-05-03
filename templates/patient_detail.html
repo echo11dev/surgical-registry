@@ -20,7 +20,7 @@
                         <div class="d-flex align-items-center gap-3 text-muted">
                             <span><i class="bi bi-card-text me-1"></i> {{ patient.mrn }}</span>
                             <span><i class="bi bi-calendar me-1"></i> {{ patient.dob.strftime('%B %d, %Y') }} ({{ patient.age }} yrs)</span>
-                            <span><i class="bi bi-gender-ambiguous me-1"></i> {{ patient.gender.name if patient.gender else '—' }}</span>
+                            <span><i class="bi bi-gender-ambiguous me-1"></i> {{ patient.sex or '—' }}</span>
                         </div>
                     </div>
                     <div class="text-end">
@@ -248,11 +248,10 @@
                             <input type="text" name="last_name" class="form-control" value="{{ patient.last_name }}" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Gender</label>
-                            <select name="gender_id" class="form-select" required>
-                                {% for gender in lookups.genders %}
-                                <option value="{{ gender.id }}" {% if patient.gender_id == gender.id %}selected{% endif %}>{{ gender.name }}</option>
-                                {% endfor %}
+                            <label class="form-label">Sex</label>
+                            <select name="sex" class="form-select" required>
+                                <option value="Male" {% if patient.sex == 'Male' %}selected{% endif %}>Male</option>
+                                <option value="Female" {% if patient.sex == 'Female' %}selected{% endif %}>Female</option>
                             </select>
                         </div>
                         <div class="col-md-6">

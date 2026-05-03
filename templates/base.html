@@ -9,8 +9,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #FF6B00;      /* University of Miami Orange */
-            --secondary-color: #00A651;    /* University of Miami Green */
+            --primary-color: #00A651;      /* University of Miami Green */
+            --secondary-color: #FF6B00;    /* University of Miami Orange (accent) */
             --um-navy: #002D62;
         }
         body {
@@ -23,21 +23,21 @@
             line-height: 1.1;
         }
         .btn-primary {
-            background-color: #FF6B00;
-            border-color: #FF6B00;
+            background-color: #00A651;
+            border-color: #00A651;
         }
         .btn-primary:hover {
-            background-color: #e55a00;
-            border-color: #e55a00;
+            background-color: #00843D;
+            border-color: #00843D;
         }
         .bg-primary {
-            background-color: #FF6B00 !important;
+            background-color: #00A651 !important;
         }
         .text-primary {
-            color: #FF6B00 !important;
+            color: #00A651 !important;
         }
         .badge-procedure {
-            background-color: #FF6B00;
+            background-color: #00A651;
             color: white;
         }
         .navbar-brand {
@@ -66,11 +66,11 @@
             background-color: #f8f9fa;
         }
         .modal-header {
-            background: linear-gradient(135deg, #0d6efd, #0a58ca);
+            background: linear-gradient(135deg, #00A651, #00843D);
             color: white;
         }
         .section-header {
-            border-bottom: 3px solid #0d6efd;
+            border-bottom: 3px solid #00A651;
             padding-bottom: 0.5rem;
             margin-bottom: 1.5rem;
         }
@@ -78,8 +78,8 @@
             font-size: 0.925rem;
         }
         .badge-procedure {
-            background-color: #e7f1ff;
-            color: #0d6efd;
+            background-color: #e6f7ed;
+            color: #00A651;
             font-weight: 500;
         }
     </style>
@@ -87,7 +87,7 @@
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top" style="background-color: #FF6B00;">
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top" style="background-color: #00A651;">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center" href="{{ url_for('dashboard') }}">
                 <i class="bi bi-bone me-2 fs-4"></i>

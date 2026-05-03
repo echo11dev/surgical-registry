@@ -10,18 +10,11 @@
 
 <!-- Tabs for each lookup -->
 <ul class="nav nav-tabs mb-3" id="lookupTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="genders-tab" data-bs-toggle="tab" data-bs-target="#genders" type="button" role="tab">Genders ({{ lookups.genders|length }})</button>
-    </li>
+    <!-- Genders removed (now hardcoded Male/Female in patient forms) -->
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="procedures-tab" data-bs-toggle="tab" data-bs-target="#procedures" type="button" role="tab">Procedures ({{ lookups.procedure_types|length }})</button>
     </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="implants-tab" data-bs-toggle="tab" data-bs-target="#implants" type="button" role="tab">Implant Types ({{ lookups.implant_types|length }})</button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="manufacturers-tab" data-bs-toggle="tab" data-bs-target="#manufacturers" type="button" role="tab">Manufacturers ({{ lookups.manufacturers|length }})</button>
-    </li>
+    <!-- Implant Types and Manufacturers removed from lookup management (managed in Implant Master page) -->
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="hospitals-tab" data-bs-toggle="tab" data-bs-target="#hospitals" type="button" role="tab">Hospitals ({{ lookups.hospitals|length }})</button>
     </li>
@@ -31,32 +24,7 @@
 </ul>
 
 <div class="tab-content" id="lookupTabsContent">
-    <!-- Genders -->
-    <div class="tab-pane fade show active" id="genders" role="tabpanel">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Genders</span>
-                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal" data-table="genders" data-title="Add Gender">+ Add</button>
-            </div>
-            <div class="card-body p-0">
-                <table class="table table-sm mb-0">
-                    <thead><tr><th>Name</th><th class="text-end">Actions</th></tr></thead>
-                    <tbody>
-                        {% for item in lookups.genders %}
-                        <tr>
-                            <td>{{ item.name }}</td>
-                            <td class="text-end">
-                                <form action="{{ url_for('delete_lookup', table='genders', entry_id=item.id) }}" method="POST" class="d-inline">
-                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDelete(this.form.id || 'delForm{{ item.id }}', 'gender'); this.form.id='delForm{{ item.id }}'; this.form.submit();">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+    <!-- Genders removed (hardcoded in patient forms) -->
 
     <!-- Procedure Types -->
     <div class="tab-pane fade" id="procedures" role="tabpanel">
