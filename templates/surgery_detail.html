@@ -81,7 +81,7 @@
                         {{ implant.manufacturer.name if implant.manufacturer else '—' }}<br>
                         <small class="text-muted">{{ implant.model or '—' }}</small>
                     </td>
-                    <td><code>{{ implant.serial_number or '—' }}</code></td>
+                    <td><code>{{ implant.reference_number or '—' }}</code></td>
                     <td>
                         {{ implant.size or '—' }}<br>
                         <small class="text-muted">Lot: {{ implant.lot_number or '—' }}</small>
@@ -149,9 +149,10 @@
                             <label class="form-label">Model</label>
                             <input type="text" name="model" class="form-control" placeholder="e.g. Accolade II">
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Serial Number (unique)</label>
-                            <input type="text" name="serial_number" class="form-control" placeholder="STR-2026-XXXXX">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Reference / Catalog Number <span class="text-danger">*</span></label>
+                            <input type="text" name="reference_number" class="form-control" placeholder="e.g. STR-ACC-5 or ZIM-PER-7" required>
+                            <small class="text-muted">Enter the catalog number — other details will auto-populate from the master implant list (feature coming in next update)</small>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Size</label>

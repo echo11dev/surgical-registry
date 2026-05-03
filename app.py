@@ -81,7 +81,12 @@ class Patient(db.Model):
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     dob = db.Column(db.Date, nullable=False)
-    gender_id = db.Column(db.Integer, db.ForeignKey('genders.id'))
+    gender_id = db.Column(db.Integer, db.ForeignKey('genders.id'))  # kept as gender_id for compatibility, labeled as "Sex" in UI
+    sex = db.Column(db.String(10))  # 'Male' or 'Female' (simplified)
+    weight_kg = db.Column(db.Float)
+    height_cm = db.Column(db.Float)
+    race = db.Column(db.String(50))
+    ethnicity = db.Column(db.String(50))
     phone = db.Column(db.String(20))
     email = db.Column(db.String(100))
     address = db.Column(db.Text)
@@ -99,6 +104,12 @@ class Patient(db.Model):
         today = date.today()
         return today.year - self.dob.year - ((today.month, today.day) < (self.dob.month, self.dob.day))
 
+    @property
+    def bmi(self):
+        if self.weight_kg and self.height_cm and self.height_cm > 0:
+            return round(self.weight_kg / ((self.height_cm / 100) ** 2), 1)
+        return None
+
 class Surgery(db.Model):
     __tablename__ = 'surgeries'
     id = db.Column(db.Integer, primary_key=True)
@@ -110,6 +121,16 @@ class Surgery(db.Model):
     operating_room = db.Column(db.String(50))
     duration_minutes = db.Column(db.Integer)
     notes = db.Column(db.Text)
+    
+    # New orthopedic-specific fields
+    joint = db.Column(db.String(10))           # 'Hip' or 'Knee'
+    side = db.Column(db.String(10))            # 'Left' or 'Right'
+    surgery_type = db.Column(db.String(20))    # 'Primary' or 'Revision'
+    revision_reason = db.Column(db.String(50)) # 'Aseptic' or 'Infected' (if revision)
+    
+    # Elixhauser Comorbidity Index (van Walraven) - simplified score
+    elixhauser_score = db.Column(db.Integer, default=0)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     implants = db.relationship('Implant', backref='surgery', cascade='all, delete-orphan', lazy=True)
@@ -121,7 +142,7 @@ class Implant(db.Model):
     implant_type_id = db.Column(db.Integer, db.ForeignKey('implant_types.id'))
     manufacturer_id = db.Column(db.Integer, db.ForeignKey('manufacturers.id'))
     model = db.Column(db.String(100))
-    serial_number = db.Column(db.String(100), unique=True)
+    reference_number = db.Column(db.String(100), unique=True)  # was serial_number
     size = db.Column(db.String(50))
     lot_number = db.Column(db.String(50))
     notes = db.Column(db.Text)
@@ -273,21 +294,21 @@ def seed_initial_data():
     # Sample Implants (updated for new simplified implant types)
     sample_implants = [
         # Surgery 1 - Hip (THA)
-        {'surgery_id': 1, 'implant_type_id': 3, 'manufacturer_id': 1, 'model': 'Accolade II', 'serial_number': 'STR-2024-78432', 'size': 'Size 5', 'lot_number': 'LOT-39281'},
-        {'surgery_id': 1, 'implant_type_id': 1, 'manufacturer_id': 1, 'model': 'Trident II', 'serial_number': 'STR-2024-78433', 'size': '54mm', 'lot_number': 'LOT-39282'},
-        {'surgery_id': 1, 'implant_type_id': 4, 'manufacturer_id': 1, 'model': 'LFIT Anatomic', 'serial_number': 'STR-2024-78434', 'size': '32mm', 'lot_number': 'LOT-39283'},
+        {'surgery_id': 1, 'implant_type_id': 3, 'manufacturer_id': 1, 'model': 'Accolade II', 'reference_number': 'STR-2024-78432', 'size': 'Size 5', 'lot_number': 'LOT-39281'},
+        {'surgery_id': 1, 'implant_type_id': 1, 'manufacturer_id': 1, 'model': 'Trident II', 'reference_number': 'STR-2024-78433', 'size': '54mm', 'lot_number': 'LOT-39282'},
+        {'surgery_id': 1, 'implant_type_id': 4, 'manufacturer_id': 1, 'model': 'LFIT Anatomic', 'reference_number': 'STR-2024-78434', 'size': '32mm', 'lot_number': 'LOT-39283'},
         # Surgery 2 - Knee (TKA)
-        {'surgery_id': 2, 'implant_type_id': 5, 'manufacturer_id': 2, 'model': 'Persona CR', 'serial_number': 'ZIM-2025-11234', 'size': 'Size 7', 'lot_number': 'LOT-55102'},
-        {'surgery_id': 2, 'implant_type_id': 6, 'manufacturer_id': 2, 'model': 'Persona Tibial', 'serial_number': 'ZIM-2025-11235', 'size': 'Size 7', 'lot_number': 'LOT-55103'},
-        {'surgery_id': 2, 'implant_type_id': 7, 'manufacturer_id': 2, 'model': 'Persona PS Insert', 'serial_number': 'ZIM-2025-11236', 'size': '10mm', 'lot_number': 'LOT-55104'},
+        {'surgery_id': 2, 'implant_type_id': 5, 'manufacturer_id': 2, 'model': 'Persona CR', 'reference_number': 'ZIM-2025-11234', 'size': 'Size 7', 'lot_number': 'LOT-55102'},
+        {'surgery_id': 2, 'implant_type_id': 6, 'manufacturer_id': 2, 'model': 'Persona Tibial', 'reference_number': 'ZIM-2025-11235', 'size': 'Size 7', 'lot_number': 'LOT-55103'},
+        {'surgery_id': 2, 'implant_type_id': 7, 'manufacturer_id': 2, 'model': 'Persona PS Insert', 'reference_number': 'ZIM-2025-11236', 'size': '10mm', 'lot_number': 'LOT-55104'},
         # Surgery 3 - Hip Revision
-        {'surgery_id': 3, 'implant_type_id': 1, 'manufacturer_id': 3, 'model': 'Pinnacle', 'serial_number': 'DPS-2024-99112', 'size': '54mm', 'lot_number': 'LOT-88321'},
-        {'surgery_id': 3, 'implant_type_id': 2, 'manufacturer_id': 3, 'model': 'Marathon', 'serial_number': 'DPS-2024-99113', 'size': '54mm', 'lot_number': 'LOT-88322'},
+        {'surgery_id': 3, 'implant_type_id': 1, 'manufacturer_id': 3, 'model': 'Pinnacle', 'reference_number': 'DPS-2024-99112', 'size': '54mm', 'lot_number': 'LOT-88321'},
+        {'surgery_id': 3, 'implant_type_id': 2, 'manufacturer_id': 3, 'model': 'Marathon', 'reference_number': 'DPS-2024-99113', 'size': '54mm', 'lot_number': 'LOT-88322'},
         # Surgery 4 - Knee
-        {'surgery_id': 4, 'implant_type_id': 5, 'manufacturer_id': 2, 'model': 'Persona CR', 'serial_number': 'ZIM-2024-33445', 'size': 'Size 6', 'lot_number': 'LOT-44719'},
-        {'surgery_id': 4, 'implant_type_id': 8, 'manufacturer_id': 2, 'model': 'Persona Patella', 'serial_number': 'ZIM-2024-33446', 'size': '32mm', 'lot_number': 'LOT-44720'},
+        {'surgery_id': 4, 'implant_type_id': 5, 'manufacturer_id': 2, 'model': 'Persona CR', 'reference_number': 'ZIM-2024-33445', 'size': 'Size 6', 'lot_number': 'LOT-44719'},
+        {'surgery_id': 4, 'implant_type_id': 8, 'manufacturer_id': 2, 'model': 'Persona Patella', 'reference_number': 'ZIM-2024-33446', 'size': '32mm', 'lot_number': 'LOT-44720'},
         # Surgery 5 - UKA
-        {'surgery_id': 5, 'implant_type_id': 5, 'manufacturer_id': 4, 'model': 'Oxford Partial', 'serial_number': 'SN-2025-22331', 'size': 'Size 3', 'lot_number': 'LOT-77890'},
+        {'surgery_id': 5, 'implant_type_id': 5, 'manufacturer_id': 4, 'model': 'Oxford Partial', 'reference_number': 'SN-2025-22331', 'size': 'Size 3', 'lot_number': 'LOT-77890'},
     ]
 
     for i_data in sample_implants:
@@ -576,7 +597,7 @@ def add_implant():
         implant_type_id = request.form.get('implant_type_id', type=int)
         manufacturer_id = request.form.get('manufacturer_id', type=int)
         model = request.form.get('model', '').strip() or None
-        serial_number = request.form.get('serial_number', '').strip() or None
+        reference_number = request.form.get('reference_number', '').strip() or None
         size = request.form.get('size', '').strip() or None
         lot_number = request.form.get('lot_number', '').strip() or None
         notes = request.form.get('notes', '').strip() or None
@@ -590,7 +611,7 @@ def add_implant():
             implant_type_id=implant_type_id,
             manufacturer_id=manufacturer_id,
             model=model,
-            serial_number=serial_number,
+            reference_number=reference_number,
             size=size,
             lot_number=lot_number,
             notes=notes
@@ -618,7 +639,7 @@ def edit_implant(implant_id):
         implant.implant_type_id = request.form.get('implant_type_id', type=int) or implant.implant_type_id
         implant.manufacturer_id = request.form.get('manufacturer_id', type=int) or implant.manufacturer_id
         implant.model = request.form.get('model', '').strip() or None
-        implant.serial_number = request.form.get('serial_number', '').strip() or None
+        implant.reference_number = request.form.get('reference_number', '').strip() or None
         implant.size = request.form.get('size', '').strip() or None
         implant.lot_number = request.form.get('lot_number', '').strip() or None
         implant.notes = request.form.get('notes', '').strip() or None
