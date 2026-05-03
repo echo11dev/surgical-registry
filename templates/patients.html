@@ -239,6 +239,43 @@
                                 <option value="Female" {% if patient.sex == 'Female' %}selected{% endif %}>Female</option>
                             </select>
                         </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Weight (kg)</label>
+                            <input type="number" step="0.1" name="weight_kg" class="form-control" value="{{ patient.weight_kg or '' }}" oninput="calculateBMIEdit({{ patient.id }})">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Height (cm)</label>
+                            <input type="number" step="0.1" name="height_cm" class="form-control" value="{{ patient.height_cm or '' }}" oninput="calculateBMIEdit({{ patient.id }})">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">BMI</label>
+                            <input type="text" id="bmi_edit_{{ patient.id }}" class="form-control" value="{{ patient.bmi or '—' }}" readonly>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Age</label>
+                            <input type="text" class="form-control" value="{{ patient.age }} years" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Race</label>
+                            <select name="race" class="form-select">
+                                <option value="">Select race...</option>
+                                <option value="White" {% if patient.race == 'White' %}selected{% endif %}>White</option>
+                                <option value="Black or African American" {% if patient.race == 'Black or African American' %}selected{% endif %}>Black or African American</option>
+                                <option value="Asian" {% if patient.race == 'Asian' %}selected{% endif %}>Asian</option>
+                                <option value="American Indian or Alaska Native" {% if patient.race == 'American Indian or Alaska Native' %}selected{% endif %}>American Indian or Alaska Native</option>
+                                <option value="Native Hawaiian or Other Pacific Islander" {% if patient.race == 'Native Hawaiian or Other Pacific Islander' %}selected{% endif %}>Native Hawaiian or Other Pacific Islander</option>
+                                <option value="Other" {% if patient.race == 'Other' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ethnicity</label>
+                            <select name="ethnicity" class="form-select">
+                                <option value="">Select ethnicity...</option>
+                                <option value="Hispanic or Latino" {% if patient.ethnicity == 'Hispanic or Latino' %}selected{% endif %}>Hispanic or Latino</option>
+                                <option value="Not Hispanic or Latino" {% if patient.ethnicity == 'Not Hispanic or Latino' %}selected{% endif %}>Not Hispanic or Latino</option>
+                                <option value="Unknown" {% if patient.ethnicity == 'Unknown' %}selected{% endif %}>Unknown / Not Reported</option>
+                            </select>
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Phone</label>
                             <input type="tel" name="phone" class="form-control" value="{{ patient.phone or '' }}">
@@ -270,6 +307,19 @@ function calculateBMI() {
         if (bmiField) bmiField.value = bmi;
     } else {
         if (bmiField) bmiField.value = '—';
+    }
+}
+
+function calculateBMIEdit(patientId) {
+    const weight = parseFloat(document.querySelector(`input[name="weight_kg"]`)?.value);
+    const height = parseFloat(document.querySelector(`input[name="height_cm"]`)?.value);
+    const bmiField = document.getElementById(`bmi_edit_${patientId}`);
+    
+    if (weight && height && height > 0 && bmiField) {
+        const bmi = (weight / ((height / 100) ** 2)).toFixed(1);
+        bmiField.value = bmi;
+    } else if (bmiField) {
+        bmiField.value = '—';
     }
 }
 

@@ -128,8 +128,9 @@ class Surgery(db.Model):
     surgery_type = db.Column(db.String(20))    # 'Primary' or 'Revision'
     revision_reason = db.Column(db.String(50)) # 'Aseptic' or 'Infected' (if revision)
     
-    # Elixhauser Comorbidity Index (van Walraven) - simplified score
+    # Elixhauser Comorbidity Index (van Walraven)
     elixhauser_score = db.Column(db.Integer, default=0)
+    comorbidities = db.Column(db.JSON, default={})  # Stores Yes/No for each comorbidity
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -921,6 +922,67 @@ def search_implant_catalog():
         'size': c.size or '',
         'description': c.description or ''
     } for c in results])
+
+
+# ---------- Elixhauser Comorbidities ----------
+@app.route('/surgeries/<int:surgery_id>/comorbidities', methods=['POST'])
+def save_comorbidities(surgery_id):
+    """Save Elixhauser comorbidities for a surgery"""
+    surgery = Surgery.query.get_or_404(surgery_id)
+    try:
+        comorbidities = {}
+        score = 0
+        
+        # Full van Walraven Elixhauser weights (30 comorbidities)
+        weights = {
+            'congestive_heart_failure': 7,
+            'cardiac_arrhythmia': 5,
+            'valvular_disease': 3,
+            'pulmonary_circulation': 6,
+            'peripheral_vascular': 2,
+            'hypertension': 1,
+            'paralysis': 7,
+            'neurological_disorders': 6,
+            'chronic_pulmonary': 3,
+            'diabetes': 0,
+            'diabetes_complications': 1,
+            'hypothyroidism': 0,
+            'renal_failure': 5,
+            'liver_disease': 11,
+            'peptic_ulcer': 0,
+            'aids_hiv': 0,
+            'lymphoma': 9,
+            'metastatic_cancer': 14,
+            'solid_tumor': 7,
+            'rheumatoid_arthritis': 0,
+            'coagulopathy': 3,
+            'obesity': 0,
+            'weight_loss': 6,
+            'fluid_electrolyte': 5,
+            'blood_loss_anemia': 3,
+            'deficiency_anemia': 3,
+            'alcohol_abuse': 0,
+            'drug_abuse': 4,
+            'psychoses': 5,
+            'depression': 0
+        }
+        
+        for key, weight in weights.items():
+            value = request.form.get(key, 'no')
+            comorbidities[key] = value
+            if value == 'yes':
+                score += weight
+        
+        surgery.comorbidities = comorbidities
+        surgery.elixhauser_score = score
+        db.session.commit()
+        
+        flash(f'Comorbidities saved. Elixhauser Score: {score}', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error saving comorbidities: {str(e)}', 'danger')
+    
+    return redirect(url_for('surgery_detail', surgery_id=surgery_id))
 
 
 # ---------- Health Check (for hosting platforms) ----------

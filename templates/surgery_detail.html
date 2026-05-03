@@ -33,6 +33,9 @@
                     <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editSurgeryModal">
                         <i class="bi bi-pencil me-1"></i> Edit Surgery
                     </button>
+                    <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#comorbiditiesModal">
+                        <i class="bi bi-heart-pulse me-1"></i> Comorbidities
+                    </button>
                     <form id="deleteSurgeryForm" action="{{ url_for('delete_surgery', surgery_id=surgery.id) }}" method="POST" class="d-inline">
                         <button type="button" class="btn btn-outline-danger" onclick="confirmDelete('deleteSurgeryForm', 'surgery and all implants')">
                             <i class="bi bi-trash me-1"></i> Delete
@@ -159,6 +162,80 @@
 </div>
 {% endif %}
 
+<!-- Comorbidities Modal (Elixhauser van Walraven) -->
+<div class="modal fade" id="comorbiditiesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-heart-pulse me-2"></i>Elixhauser Comorbidities (van Walraven)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('save_comorbidities', surgery_id=surgery.id) }}">
+                <div class="modal-body">
+                    <p class="text-muted small">Select "Yes" for each comorbidity the patient has. The score is calculated automatically using van Walraven weights.</p>
+                    
+                    <div class="row g-2">
+                        {% set comorbidities = [
+                            ('congestive_heart_failure', 'Congestive Heart Failure', 7),
+                            ('cardiac_arrhythmia', 'Cardiac Arrhythmia', 5),
+                            ('valvular_disease', 'Valvular Disease', 3),
+                            ('pulmonary_circulation', 'Pulmonary Circulation Disorders', 6),
+                            ('peripheral_vascular', 'Peripheral Vascular Disease', 2),
+                            ('hypertension', 'Hypertension', 1),
+                            ('paralysis', 'Paralysis', 7),
+                            ('neurological_disorders', 'Neurological Disorders', 6),
+                            ('chronic_pulmonary', 'Chronic Pulmonary Disease', 3),
+                            ('diabetes', 'Diabetes (uncomplicated)', 0),
+                            ('diabetes_complications', 'Diabetes with Complications', 1),
+                            ('hypothyroidism', 'Hypothyroidism', 0),
+                            ('renal_failure', 'Renal Failure', 5),
+                            ('liver_disease', 'Liver Disease', 11),
+                            ('peptic_ulcer', 'Peptic Ulcer Disease', 0),
+                            ('aids_hiv', 'AIDS/HIV', 0),
+                            ('lymphoma', 'Lymphoma', 9),
+                            ('metastatic_cancer', 'Metastatic Cancer', 14),
+                            ('solid_tumor', 'Solid Tumor without Metastasis', 7),
+                            ('rheumatoid_arthritis', 'Rheumatoid Arthritis', 0),
+                            ('coagulopathy', 'Coagulopathy', 3),
+                            ('obesity', 'Obesity', 0),
+                            ('weight_loss', 'Weight Loss', 6),
+                            ('fluid_electrolyte', 'Fluid and Electrolyte Disorders', 5),
+                            ('blood_loss_anemia', 'Blood Loss Anemia', 3),
+                            ('deficiency_anemia', 'Deficiency Anemia', 3),
+                            ('alcohol_abuse', 'Alcohol Abuse', 0),
+                            ('drug_abuse', 'Drug Abuse', 4),
+                            ('psychoses', 'Psychoses', 5),
+                            ('depression', 'Depression', 0)
+                        ] %}
+                        
+                        {% for key, label, weight in comorbidities %}
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="{{ key }}" name="{{ key }}" value="yes"
+                                       {% if surgery.comorbidities and surgery.comorbidities.get(key) == 'yes' %}checked{% endif %}>
+                                <label class="form-check-label" for="{{ key }}">
+                                    {{ label }} <span class="text-muted small">(+{{ weight }})</span>
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <hr>
+                    <div class="alert alert-light">
+                        <strong>Elixhauser Score (van Walraven):</strong> 
+                        <span id="elixhauser_score" class="fs-4 fw-bold text-primary">{{ surgery.elixhauser_score or 0 }}</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info">Save Comorbidities</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Add Implant Modal with Catalog Search -->
 <div class="modal fade" id="addImplantModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -257,6 +334,61 @@
 </div>
 
 <script>
+// Elixhauser van Walraven Score Calculation
+function calculateElixhauserScore() {
+    const weights = {
+        'congestive_heart_failure': 7,
+        'cardiac_arrhythmia': 5,
+        'valvular_disease': 3,
+        'pulmonary_circulation': 6,
+        'peripheral_vascular': 2,
+        'hypertension': 1,
+        'paralysis': 7,
+        'neurological_disorders': 6,
+        'chronic_pulmonary': 3,
+        'diabetes': 0,
+        'diabetes_complications': 1,
+        'hypothyroidism': 0,
+        'renal_failure': 5,
+        'liver_disease': 11,
+        'peptic_ulcer': 0,
+        'aids_hiv': 0,
+        'lymphoma': 9,
+        'metastatic_cancer': 14,
+        'solid_tumor': 7,
+        'rheumatoid_arthritis': 0,
+        'coagulopathy': 3,
+        'obesity': 0,
+        'weight_loss': 6,
+        'fluid_electrolyte': 5,
+        'blood_loss_anemia': 3,
+        'deficiency_anemia': 3,
+        'alcohol_abuse': 0,
+        'drug_abuse': 4,
+        'psychoses': 5,
+        'depression': 0
+    };
+    
+    let score = 0;
+    Object.keys(weights).forEach(key => {
+        const checkbox = document.getElementById(key);
+        if (checkbox && checkbox.checked) {
+            score += weights[key];
+        }
+    });
+    
+    const scoreElement = document.getElementById('elixhauser_score');
+    if (scoreElement) scoreElement.textContent = score;
+}
+
+// Attach listeners to all comorbidity checkboxes
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('#comorbiditiesModal input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', calculateElixhauserScore);
+    });
+});
+
 // Implant Catalog Search + Auto-fill
 function searchImplantCatalog() {
     const query = document.getElementById('implantSearch').value.trim();
