@@ -35,12 +35,6 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 # Initialize SQLAlchemy
 db = SQLAlchemy(app)
 
-# ==================== DATABASE INITIALIZATION (Production Safe) ====================
-# This runs on every startup, including with gunicorn on Render
-with app.app_context():
-    db.create_all()
-    seed_initial_data()
-
 # ==================== MODELS ====================
 
 class Gender(db.Model):
@@ -726,6 +720,11 @@ def health_check():
             'status': 'unhealthy',
             'error': str(e)
         }), 500
+
+# ==================== DATABASE INITIALIZATION (runs on every startup - works with gunicorn) ====================
+with app.app_context():
+    db.create_all()
+    seed_initial_data()
 
 # ==================== MAIN ====================
 
