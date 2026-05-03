@@ -150,13 +150,19 @@ class Implant(db.Model):
 
 
 class ImplantCatalog(db.Model):
-    """Master catalog of available implants searchable by catalog number"""
+    """Master catalog of available implants searchable by catalog number.
+    This is the single source of truth for all implant information.
+    """
     __tablename__ = 'implant_catalog'
     id = db.Column(db.Integer, primary_key=True)
     catalog_number = db.Column(db.String(100), unique=True, nullable=False, index=True)
     implant_type_id = db.Column(db.Integer, db.ForeignKey('implant_types.id'))
     manufacturer_id = db.Column(db.Integer, db.ForeignKey('manufacturers.id'))
     model = db.Column(db.String(150))
+    design = db.Column(db.String(100))       # e.g. CR, PS, Cementless, etc.
+    fixation = db.Column(db.String(50))      # e.g. Cemented, Cementless, Hybrid
+    side = db.Column(db.String(20))          # Left, Right, Both, N/A
+    size = db.Column(db.String(50))
     description = db.Column(db.Text)
     
     implant_type = db.relationship('ImplantType', backref='catalog_entries')
@@ -320,18 +326,26 @@ def seed_initial_data():
     # Seed Implant Catalog (Master list searchable by catalog number)
     if ImplantCatalog.query.first() is None:
         catalog_data = [
-            # Hip - Stryker
-            {'catalog_number': 'STR-ACC-5', 'implant_type_id': 3, 'manufacturer_id': 1, 'model': 'Accolade II', 'description': 'Cementless femoral stem, size 5'},
-            {'catalog_number': 'STR-TRI-54', 'implant_type_id': 1, 'manufacturer_id': 1, 'model': 'Trident II', 'description': 'Acetabular shell, 54mm'},
-            {'catalog_number': 'STR-LFIT-32', 'implant_type_id': 4, 'manufacturer_id': 1, 'model': 'LFIT Anatomic', 'description': 'Femoral head, 32mm, ceramic'},
-            # Knee - Zimmer Biomet
-            {'catalog_number': 'ZIM-PER-7', 'implant_type_id': 5, 'manufacturer_id': 2, 'model': 'Persona CR', 'description': 'Femoral component, size 7, CR'},
-            {'catalog_number': 'ZIM-TIB-7', 'implant_type_id': 6, 'manufacturer_id': 2, 'model': 'Persona Tibial', 'description': 'Tibial component, size 7'},
-            {'catalog_number': 'ZIM-INS-10', 'implant_type_id': 7, 'manufacturer_id': 2, 'model': 'Persona PS Insert', 'description': 'Tibial liner, 10mm, PS'},
-            {'catalog_number': 'ZIM-PAT-32', 'implant_type_id': 8, 'manufacturer_id': 2, 'model': 'Persona Patella', 'description': 'Patellar component, 32mm'},
-            # Hip - DePuy Synthes
-            {'catalog_number': 'DPS-PIN-54', 'implant_type_id': 1, 'manufacturer_id': 3, 'model': 'Pinnacle', 'description': 'Acetabular shell, 54mm'},
-            {'catalog_number': 'DPS-ART-32', 'implant_type_id': 4, 'manufacturer_id': 3, 'model': 'Articul/Eze', 'description': 'Femoral head, 32mm'},
+            # === HIP IMPLANTS ===
+            # Stryker Hip
+            {'catalog_number': 'STR-ACC-5', 'implant_type_id': 3, 'manufacturer_id': 1, 'model': 'Accolade II', 'design': 'Cementless', 'fixation': 'Cementless', 'side': 'N/A', 'size': 'Size 5', 'description': 'Primary cementless femoral stem'},
+            {'catalog_number': 'STR-TRI-54', 'implant_type_id': 1, 'manufacturer_id': 1, 'model': 'Trident II', 'design': 'Porous', 'fixation': 'Cementless', 'side': 'N/A', 'size': '54mm', 'description': 'Acetabular shell with porous coating'},
+            {'catalog_number': 'STR-LFIT-32', 'implant_type_id': 4, 'manufacturer_id': 1, 'model': 'LFIT Anatomic', 'design': 'Ceramic', 'fixation': 'N/A', 'side': 'N/A', 'size': '32mm', 'description': 'Ceramic femoral head, +0 offset'},
+            
+            # DePuy Synthes Hip
+            {'catalog_number': 'DPS-PIN-54', 'implant_type_id': 1, 'manufacturer_id': 3, 'model': 'Pinnacle', 'design': 'Porous', 'fixation': 'Cementless', 'side': 'N/A', 'size': '54mm', 'description': 'Acetabular shell, multi-hole'},
+            {'catalog_number': 'DPS-ART-32', 'implant_type_id': 4, 'manufacturer_id': 3, 'model': 'Articul/Eze', 'design': 'Metal', 'fixation': 'N/A', 'side': 'N/A', 'size': '32mm', 'description': 'Cobalt-chrome femoral head'},
+            
+            # === KNEE IMPLANTS ===
+            # Zimmer Biomet Knee
+            {'catalog_number': 'ZIM-PER-7', 'implant_type_id': 5, 'manufacturer_id': 2, 'model': 'Persona CR', 'design': 'CR', 'fixation': 'Cemented', 'side': 'N/A', 'size': 'Size 7', 'description': 'Cruciate retaining femoral component'},
+            {'catalog_number': 'ZIM-TIB-7', 'implant_type_id': 6, 'manufacturer_id': 2, 'model': 'Persona Tibial', 'design': 'Modular', 'fixation': 'Cemented', 'side': 'N/A', 'size': 'Size 7', 'description': 'Tibial baseplate, modular'},
+            {'catalog_number': 'ZIM-INS-10', 'implant_type_id': 7, 'manufacturer_id': 2, 'model': 'Persona PS Insert', 'design': 'PS', 'fixation': 'N/A', 'side': 'N/A', 'size': '10mm', 'description': 'Posterior stabilized tibial insert'},
+            {'catalog_number': 'ZIM-PAT-32', 'implant_type_id': 8, 'manufacturer_id': 2, 'model': 'Persona Patella', 'design': 'Dome', 'fixation': 'Cemented', 'side': 'N/A', 'size': '32mm', 'description': 'Patellar button, 3-pegged'},
+            
+            # Smith & Nephew Knee (for variety)
+            {'catalog_number': 'SN-LEG-6', 'implant_type_id': 5, 'manufacturer_id': 4, 'model': 'Legion CR', 'design': 'CR', 'fixation': 'Cementless', 'side': 'Left', 'size': 'Size 6', 'description': 'Left femoral component, cementless'},
+            {'catalog_number': 'SN-LEG-6R', 'implant_type_id': 5, 'manufacturer_id': 4, 'model': 'Legion CR', 'design': 'CR', 'fixation': 'Cementless', 'side': 'Right', 'size': 'Size 6', 'description': 'Right femoral component, cementless'},
         ]
         for c in catalog_data:
             db.session.add(ImplantCatalog(**c))
@@ -781,6 +795,10 @@ def search_implant_catalog():
         'manufacturer_id': c.manufacturer_id,
         'manufacturer': c.manufacturer.name if c.manufacturer else '',
         'model': c.model or '',
+        'design': c.design or '',
+        'fixation': c.fixation or '',
+        'side': c.side or '',
+        'size': c.size or '',
         'description': c.description or ''
     } for c in results])
 

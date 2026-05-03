@@ -241,22 +241,26 @@ function searchImplantCatalog() {
 }
 
 function selectImplantFromCatalog(item) {
-    // Auto-fill the form
+    // Auto-fill the form with all available data from catalog
     document.getElementById('reference_number').value = item.catalog_number || '';
     document.getElementById('model').value = item.model || '';
     document.getElementById('implant_type_id').value = item.implant_type_id || '';
     document.getElementById('manufacturer_id').value = item.manufacturer_id || '';
+    document.getElementById('size').value = item.size || '';
+    
+    // If we had design/fixation/side fields in the form, we would fill them here too
+    // For now they are stored in the catalog and copied on selection
     
     // Hide search results
     document.getElementById('searchResults').style.display = 'none';
     
-    // Optional: show a toast or message
+    // Show success toast
     const toast = document.createElement('div');
     toast.className = 'alert alert-success py-1 px-2 mt-2 mb-0';
     toast.style.fontSize = '0.85rem';
-    toast.innerHTML = `✓ Auto-filled from catalog: ${item.catalog_number}`;
+    toast.innerHTML = `✓ Auto-filled: ${item.catalog_number} — ${item.model}`;
     document.getElementById('addImplantForm').prepend(toast);
-    setTimeout(() => toast.remove(), 2500);
+    setTimeout(() => toast.remove(), 3000);
 }
 
 // Allow Enter key to trigger search
@@ -266,6 +270,29 @@ document.getElementById('implantSearch')?.addEventListener('keypress', function(
         searchImplantCatalog();
     }
 });
+
+// Bonus: Auto-search when user types 5+ characters in Reference Number field
+let searchTimeout;
+const refInput = document.getElementById('reference_number');
+if (refInput) {
+    refInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const val = this.value.trim();
+        if (val.length >= 5) {
+            searchTimeout = setTimeout(() => {
+                // Try exact match first
+                fetch(`/api/implant-catalog/search?q=${encodeURIComponent(val)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const exact = data.find(d => d.catalog_number.toUpperCase() === val.toUpperCase());
+                        if (exact) {
+                            selectImplantFromCatalog(exact);
+                        }
+                    });
+            }, 600);
+        }
+    });
+}
 
 function toggleRevisionReasonEdit(select) {
     const group = document.getElementById('revision_reason_edit_group');
