@@ -206,7 +206,8 @@ function searchImplantCatalog() {
         return;
     }
     
-    fetch(`/api/implant-catalog/search?q=${encodeURIComponent(query)}`)
+    const joint = "{{ surgery.joint or '' }}";
+    fetch(`/api/implant-catalog/search?q=${encodeURIComponent(query)}&joint=${encodeURIComponent(joint)}`)
         .then(response => response.json())
         .then(data => {
             const resultsDiv = document.getElementById('searchResults');
@@ -281,7 +282,8 @@ if (refInput) {
         if (val.length >= 5) {
             searchTimeout = setTimeout(() => {
                 // Try exact match first
-                fetch(`/api/implant-catalog/search?q=${encodeURIComponent(val)}`)
+                const joint = "{{ surgery.joint or '' }}";
+                fetch(`/api/implant-catalog/search?q=${encodeURIComponent(val)}&joint=${encodeURIComponent(joint)}`)
                     .then(r => r.json())
                     .then(data => {
                         const exact = data.find(d => d.catalog_number.toUpperCase() === val.toUpperCase());

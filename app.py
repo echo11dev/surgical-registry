@@ -230,25 +230,25 @@ def seed_initial_data():
         {
             'mrn': 'MRN-2024-001',
             'first_name': 'John', 'last_name': 'Anderson',
-            'dob': date(1965, 4, 12), 'gender_id': 1,
+            'dob': date(1965, 4, 12), 'sex': 'Male',
             'phone': '(555) 123-4567', 'email': 'john.anderson@email.com'
         },
         {
             'mrn': 'MRN-2024-002',
             'first_name': 'Maria', 'last_name': 'Garcia',
-            'dob': date(1972, 9, 28), 'gender_id': 2,
+            'dob': date(1972, 9, 28), 'sex': 'Female',
             'phone': '(555) 987-6543', 'email': 'maria.garcia@email.com'
         },
         {
             'mrn': 'MRN-2024-003',
             'first_name': 'David', 'last_name': 'Lee',
-            'dob': date(1958, 11, 5), 'gender_id': 1,
+            'dob': date(1958, 11, 5), 'sex': 'Male',
             'phone': '(555) 456-7890', 'email': 'david.lee@email.com'
         },
         {
             'mrn': 'MRN-2024-004',
             'first_name': 'Aisha', 'last_name': 'Khan',
-            'dob': date(1980, 2, 15), 'gender_id': 2,
+            'dob': date(1980, 2, 15), 'sex': 'Female',
             'phone': '(555) 321-0987', 'email': 'aisha.khan@email.com'
         }
     ]
@@ -354,9 +354,8 @@ def seed_initial_data():
     print("✓ Initial data seeded successfully")
 
 def get_all_lookups():
-    """Return all lookup data for templates"""
+    """Return all lookup data for templates (genders removed - now hardcoded Male/Female)"""
     return {
-        'genders': Gender.query.order_by(Gender.name).all(),
         'procedure_types': ProcedureType.query.order_by(ProcedureType.name).all(),
         'implant_types': ImplantType.query.order_by(ImplantType.name).all(),
         'manufacturers': Manufacturer.query.order_by(Manufacturer.name).all(),
@@ -426,12 +425,12 @@ def add_patient():
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
         dob_str = request.form.get('dob')
-        gender_id = request.form.get('gender_id', type=int)
+        sex = request.form.get('sex', '').strip()
         phone = request.form.get('phone', '').strip() or None
         email = request.form.get('email', '').strip() or None
 
-        if not all([mrn, first_name, last_name, dob_str, gender_id]):
-            flash('Please fill in all required fields (MRN, Name, DOB, Gender)', 'danger')
+        if not all([mrn, first_name, last_name, dob_str, sex]):
+            flash('Please fill in all required fields (MRN, Name, DOB, Sex)', 'danger')
             return redirect(url_for('patients_list'))
 
         dob = datetime.strptime(dob_str, '%Y-%m-%d').date()
@@ -441,7 +440,7 @@ def add_patient():
             first_name=first_name,
             last_name=last_name,
             dob=dob,
-            gender_id=gender_id,
+            sex=sex,
             phone=phone,
             email=email
         )
@@ -480,7 +479,7 @@ def edit_patient(patient_id):
         dob_str = request.form.get('dob')
         if dob_str:
             patient.dob = datetime.strptime(dob_str, '%Y-%m-%d').date()
-        patient.gender_id = request.form.get('gender_id', type=int) or patient.gender_id
+        patient.sex = request.form.get('sex', patient.sex).strip()
         patient.phone = request.form.get('phone', '').strip() or None
         patient.email = request.form.get('email', '').strip() or None
         
@@ -761,6 +760,110 @@ def delete_lookup(table, entry_id):
     
     return redirect(url_for('lookups'))
 
+# ---------- IMPLANT MASTER (Dedicated CRUD page) ----------
+@app.route('/implant-master')
+def implant_master():
+    """Dedicated page to manage the Implant Catalog (Master List)"""
+    search = request.args.get('search', '').strip()
+    query = ImplantCatalog.query
+    
+    if search:
+        query = query.filter(
+            or_(
+                ImplantCatalog.catalog_number.ilike(f'%{search}%'),
+                ImplantCatalog.model.ilike(f'%{search}%'),
+                ImplantCatalog.design.ilike(f'%{search}%')
+            )
+        )
+    
+    catalog = query.order_by(ImplantCatalog.catalog_number).all()
+    lookups = get_all_lookups()
+    
+    return render_template('implant_master.html', 
+                          catalog=catalog, 
+                          search=search,
+                          lookups=lookups)
+
+@app.route('/implant-master/add', methods=['POST'])
+def add_implant_catalog():
+    """Add a new implant to the master catalog"""
+    try:
+        catalog_number = request.form.get('catalog_number', '').strip().upper()
+        implant_type_id = request.form.get('implant_type_id', type=int)
+        manufacturer_id = request.form.get('manufacturer_id', type=int)
+        model = request.form.get('model', '').strip()
+        design = request.form.get('design', '').strip() or None
+        fixation = request.form.get('fixation', '').strip() or None
+        side = request.form.get('side', '').strip() or None
+        size = request.form.get('size', '').strip() or None
+        description = request.form.get('description', '').strip() or None
+
+        if not all([catalog_number, implant_type_id, manufacturer_id, model]):
+            flash('Catalog Number, Implant Type, Manufacturer, and Model are required.', 'danger')
+            return redirect(url_for('implant_master'))
+
+        # Check for duplicate catalog number
+        if ImplantCatalog.query.filter_by(catalog_number=catalog_number).first():
+            flash(f'An implant with catalog number {catalog_number} already exists.', 'danger')
+            return redirect(url_for('implant_master'))
+
+        new_implant = ImplantCatalog(
+            catalog_number=catalog_number,
+            implant_type_id=implant_type_id,
+            manufacturer_id=manufacturer_id,
+            model=model,
+            design=design,
+            fixation=fixation,
+            side=side,
+            size=size,
+            description=description
+        )
+        db.session.add(new_implant)
+        db.session.commit()
+        flash(f'Implant {catalog_number} added to master catalog successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error adding implant: {str(e)}', 'danger')
+    
+    return redirect(url_for('implant_master'))
+
+@app.route('/implant-master/<int:catalog_id>/edit', methods=['POST'])
+def edit_implant_catalog(catalog_id):
+    """Edit an existing catalog entry"""
+    catalog = ImplantCatalog.query.get_or_404(catalog_id)
+    try:
+        catalog.catalog_number = request.form.get('catalog_number', catalog.catalog_number).strip().upper()
+        catalog.implant_type_id = request.form.get('implant_type_id', type=int) or catalog.implant_type_id
+        catalog.manufacturer_id = request.form.get('manufacturer_id', type=int) or catalog.manufacturer_id
+        catalog.model = request.form.get('model', catalog.model).strip()
+        catalog.design = request.form.get('design', '').strip() or None
+        catalog.fixation = request.form.get('fixation', '').strip() or None
+        catalog.side = request.form.get('side', '').strip() or None
+        catalog.size = request.form.get('size', '').strip() or None
+        catalog.description = request.form.get('description', '').strip() or None
+        
+        db.session.commit()
+        flash(f'Implant {catalog.catalog_number} updated successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating implant: {str(e)}', 'danger')
+    
+    return redirect(url_for('implant_master'))
+
+@app.route('/implant-master/<int:catalog_id>/delete', methods=['POST'])
+def delete_implant_catalog(catalog_id):
+    """Delete an implant from the master catalog"""
+    catalog = ImplantCatalog.query.get_or_404(catalog_id)
+    cat_num = catalog.catalog_number
+    try:
+        db.session.delete(catalog)
+        db.session.commit()
+        flash(f'Implant {cat_num} deleted from master catalog.', 'warning')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting implant: {str(e)}', 'danger')
+    return redirect(url_for('implant_master'))
+
 # ---------- API for JS (optional) ----------
 @app.route('/api/patient/<int:patient_id>/surgeries')
 def api_patient_surgeries(patient_id):
@@ -775,17 +878,34 @@ def api_patient_surgeries(patient_id):
 # ---------- Implant Catalog Search API ----------
 @app.route('/api/implant-catalog/search')
 def search_implant_catalog():
-    """Search implant catalog by catalog number or model (for auto-fill when adding implants)"""
+    """Search implant catalog by catalog number or model.
+    Optional: filter by joint (Hip/Knee) for procedure-based filtering.
+    """
     q = request.args.get('q', '').strip()
+    joint = request.args.get('joint', '').strip()  # 'Hip' or 'Knee'
+    
     if not q or len(q) < 2:
         return jsonify([])
     
-    results = ImplantCatalog.query.filter(
+    # Base query
+    query = ImplantCatalog.query.filter(
         or_(
             ImplantCatalog.catalog_number.ilike(f'%{q}%'),
             ImplantCatalog.model.ilike(f'%{q}%')
         )
-    ).limit(15).all()
+    )
+    
+    # Procedure-based filtering: only show relevant implants for the surgery type
+    if joint == 'Hip':
+        # Hip implant types: Acetabular Shell (1), Acetabular Liner (2), Femoral Stem (3), Femoral Head (4)
+        hip_type_ids = [1, 2, 3, 4]
+        query = query.filter(ImplantCatalog.implant_type_id.in_(hip_type_ids))
+    elif joint == 'Knee':
+        # Knee implant types: Femoral Component (5), Tibial Component (6), Tibial Liner (7), Patellar Component (8)
+        knee_type_ids = [5, 6, 7, 8]
+        query = query.filter(ImplantCatalog.implant_type_id.in_(knee_type_ids))
+    
+    results = query.limit(15).all()
     
     return jsonify([{
         'id': c.id,
