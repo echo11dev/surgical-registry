@@ -9,7 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #00A651;      /* University of Miami Green */
+            --primary-color: #005030;      /* University of Miami Green */
             --secondary-color: #FF6B00;    /* University of Miami Orange (accent) */
             --um-navy: #002D62;
         }
@@ -23,22 +23,23 @@
             line-height: 1.1;
         }
         .btn-primary {
-            background-color: #00A651;
-            border-color: #00A651;
+            background-color: #005030;
+            border-color: #005030;
         }
         .btn-primary:hover {
-            background-color: #00843D;
-            border-color: #00843D;
+            background-color: #003d24;
+            border-color: #003d24;
         }
         .bg-primary {
-            background-color: #00A651 !important;
+            background-color: #005030 !important;
         }
         .text-primary {
-            color: #00A651 !important;
+            color: #005030 !important;
         }
         .badge-procedure {
-            background-color: #00A651;
-            color: white;
+            background-color: #e6f7ed;
+            color: #005030;
+            font-weight: 500;
         }
         .navbar-brand {
             font-weight: 700;
@@ -66,11 +67,11 @@
             background-color: #f8f9fa;
         }
         .modal-header {
-            background: linear-gradient(135deg, #00A651, #00843D);
+            background: linear-gradient(135deg, #005030, #003d24);
             color: white;
         }
         .section-header {
-            border-bottom: 3px solid #00A651;
+            border-bottom: 3px solid #005030;
             padding-bottom: 0.5rem;
             margin-bottom: 1.5rem;
         }
@@ -110,7 +111,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'lookups' %}active{% endif %}" href="{{ url_for('lookups') }}">
-                            <i class="bi bi-list-ul me-1"></i> Lookups
+                            <i class="bi bi-list-ul me-1"></i> Tables
                         </a>
                     </li>
                     <li class="nav-item">
