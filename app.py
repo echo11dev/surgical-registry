@@ -1049,6 +1049,51 @@ def remove_research_project_from_surgery(surgery_id, project_id):
     return redirect(url_for('surgery_detail', surgery_id=surgery_id))
 
 
+# ---------- Research Projects Management (Lookup Table) ----------
+@app.route('/research-projects')
+def research_projects():
+    """Management page for all Research Projects (lookup table)"""
+    projects = ResearchProject.query.order_by(ResearchProject.name).all()
+    return render_template('research_projects.html', projects=projects)
+
+
+@app.route('/research-projects/add', methods=['POST'])
+def add_research_project():
+    """Add a new research project (global)"""
+    name = request.form.get('name', '').strip()
+    sponsor = request.form.get('sponsor', '').strip() or None
+    description = request.form.get('description', '').strip() or None
+
+    if not name:
+        flash('Project name is required.', 'danger')
+        return redirect(url_for('research_projects'))
+
+    if ResearchProject.query.filter_by(name=name).first():
+        flash('A research project with this name already exists.', 'danger')
+        return redirect(url_for('research_projects'))
+
+    project = ResearchProject(name=name, sponsor=sponsor, description=description)
+    db.session.add(project)
+    db.session.commit()
+    flash(f'Research project "{name}" created successfully.', 'success')
+    return redirect(url_for('research_projects'))
+
+
+@app.route('/research-projects/<int:project_id>/delete', methods=['POST'])
+def delete_research_project(project_id):
+    """Delete a research project"""
+    project = ResearchProject.query.get_or_404(project_id)
+    name = project.name
+    try:
+        db.session.delete(project)
+        db.session.commit()
+        flash(f'Research project "{name}" deleted.', 'warning')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Cannot delete: This project is still linked to surgeries. {str(e)}', 'danger')
+    return redirect(url_for('research_projects'))
+
+
 # ---------- Health Check (for hosting platforms) ----------
 @app.route('/health')
 def health_check():
