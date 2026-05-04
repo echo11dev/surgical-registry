@@ -578,11 +578,14 @@ def surgery_detail(surgery_id):
     implants = Implant.query.filter_by(surgery_id=surgery_id).all()
     lookups = get_all_lookups()
     
+    research_projects = ResearchProject.query.order_by(ResearchProject.name).all()
+    
     return render_template('surgery_detail.html', 
                           surgery=surgery, 
                           patient=patient,
                           implants=implants,
-                          lookups=lookups)
+                          lookups=lookups,
+                          research_projects=research_projects)
 
 @app.route('/surgeries/<int:surgery_id>/edit', methods=['POST'])
 def edit_surgery(surgery_id):
@@ -707,7 +710,8 @@ def delete_implant(implant_id):
 def lookups():
     """Manage all lookup tables"""
     lookups = get_all_lookups()
-    return render_template('lookups.html', lookups=lookups)
+    research_projects_count = ResearchProject.query.count()
+    return render_template('lookups.html', lookups=lookups, research_projects_count=research_projects_count)
 
 @app.route('/lookups/<string:table>', methods=['POST'])
 def add_lookup(table):
@@ -1007,30 +1011,23 @@ def save_comorbidities(surgery_id):
 # ---------- Research Projects ----------
 @app.route('/surgery/<int:surgery_id>/research-projects/add', methods=['POST'])
 def add_research_project_to_surgery(surgery_id):
-    """Add a research project to a surgery"""
+    """Assign an existing research project to a surgery"""
     surgery = Surgery.query.get_or_404(surgery_id)
-    project_name = request.form.get('project_name', '').strip()
-    sponsor = request.form.get('sponsor', '').strip() or None
-    description = request.form.get('description', '').strip() or None
+    project_id = request.form.get('research_project_id', type=int)
 
-    if not project_name:
-        flash('Research project name is required.', 'danger')
+    if not project_id:
+        flash('Please select a research project.', 'danger')
         return redirect(url_for('surgery_detail', surgery_id=surgery_id))
 
-    # Find or create the research project
-    project = ResearchProject.query.filter_by(name=project_name).first()
-    if not project:
-        project = ResearchProject(name=project_name, sponsor=sponsor, description=description)
-        db.session.add(project)
-        db.session.flush()  # Get the ID
+    project = ResearchProject.query.get_or_404(project_id)
 
     # Add to surgery if not already added
     if project not in surgery.research_projects:
         surgery.research_projects.append(project)
         db.session.commit()
-        flash(f'Research project "{project_name}" added to this surgery.', 'success')
+        flash(f'Research project "{project.name}" assigned to this surgery.', 'success')
     else:
-        flash('This research project is already associated with this surgery.', 'info')
+        flash('This research project is already assigned to this surgery.', 'info')
 
     return redirect(url_for('surgery_detail', surgery_id=surgery_id))
 
