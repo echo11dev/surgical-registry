@@ -135,6 +135,7 @@ class Surgery(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     implants = db.relationship('Implant', backref='surgery', cascade='all, delete-orphan', lazy=True)
+    research_projects = db.relationship('ResearchProject', secondary=surgery_research_projects, backref='surgeries', lazy='dynamic')
 
 class Implant(db.Model):
     __tablename__ = 'implants'
@@ -148,6 +149,24 @@ class Implant(db.Model):
     lot_number = db.Column(db.String(50))
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class ResearchProject(db.Model):
+    """Research projects that patients can be enrolled in during a surgery"""
+    __tablename__ = 'research_projects'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False, unique=True)
+    sponsor = db.Column(db.String(200))
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+# Association table for many-to-many between Surgery and ResearchProject
+surgery_research_projects = db.Table(
+    'surgery_research_projects',
+    db.Column('surgery_id', db.Integer, db.ForeignKey('surgeries.id'), primary_key=True),
+    db.Column('research_project_id', db.Integer, db.ForeignKey('research_projects.id'), primary_key=True)
+)
 
 
 class ImplantCatalog(db.Model):
@@ -982,6 +1001,51 @@ def save_comorbidities(surgery_id):
         db.session.rollback()
         flash(f'Error saving comorbidities: {str(e)}', 'danger')
     
+    return redirect(url_for('surgery_detail', surgery_id=surgery_id))
+
+
+# ---------- Research Projects ----------
+@app.route('/surgery/<int:surgery_id>/research-projects/add', methods=['POST'])
+def add_research_project_to_surgery(surgery_id):
+    """Add a research project to a surgery"""
+    surgery = Surgery.query.get_or_404(surgery_id)
+    project_name = request.form.get('project_name', '').strip()
+    sponsor = request.form.get('sponsor', '').strip() or None
+    description = request.form.get('description', '').strip() or None
+
+    if not project_name:
+        flash('Research project name is required.', 'danger')
+        return redirect(url_for('surgery_detail', surgery_id=surgery_id))
+
+    # Find or create the research project
+    project = ResearchProject.query.filter_by(name=project_name).first()
+    if not project:
+        project = ResearchProject(name=project_name, sponsor=sponsor, description=description)
+        db.session.add(project)
+        db.session.flush()  # Get the ID
+
+    # Add to surgery if not already added
+    if project not in surgery.research_projects:
+        surgery.research_projects.append(project)
+        db.session.commit()
+        flash(f'Research project "{project_name}" added to this surgery.', 'success')
+    else:
+        flash('This research project is already associated with this surgery.', 'info')
+
+    return redirect(url_for('surgery_detail', surgery_id=surgery_id))
+
+
+@app.route('/surgery/<int:surgery_id>/research-projects/<int:project_id>/remove', methods=['POST'])
+def remove_research_project_from_surgery(surgery_id, project_id):
+    """Remove a research project from a surgery"""
+    surgery = Surgery.query.get_or_404(surgery_id)
+    project = ResearchProject.query.get_or_404(project_id)
+
+    if project in surgery.research_projects:
+        surgery.research_projects.remove(project)
+        db.session.commit()
+        flash(f'Research project "{project.name}" removed from this surgery.', 'warning')
+
     return redirect(url_for('surgery_detail', surgery_id=surgery_id))
 
 
