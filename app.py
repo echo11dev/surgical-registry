@@ -212,8 +212,13 @@ def seed_initial_data():
         db.session.add(ProcedureType(name=pt))
 
     implant_types = [
-        'Acetabular Shell', 'Acetabular Liner', 'Femoral Stem', 'Femoral Head',
-        'Femoral Component (Knee)', 'Tibial Component', 'Tibial Liner', 'Patellar Component'
+        'Hip Acetabular Shell',
+        'Hip Acetabular Liner',
+        'Hip Femoral Stem',
+        'Hip Femoral Head',
+        'Knee Femoral Component',
+        'Knee Tibia Component',
+        'Knee Tibia Liner'
     ]
     for it in implant_types:
         db.session.add(ImplantType(name=it))
@@ -753,6 +758,46 @@ def add_lookup(table):
         flash(f'Error: {str(e)}', 'danger')
     
     return redirect(url_for('lookups'))
+
+
+@app.route('/lookups/<string:table>/<int:entry_id>/edit', methods=['POST'])
+def edit_lookup(table, entry_id):
+    """Edit a lookup entry"""
+    model_map = {
+        'procedure_types': ProcedureType,
+        'implant_types': ImplantType,
+        'manufacturers': Manufacturer,
+        'hospitals': Hospital,
+        'surgeons': Surgeon
+    }
+    model = model_map.get(table)
+    if not model:
+        flash('Invalid lookup table.', 'danger')
+        return redirect(url_for('lookups'))
+
+    entry = model.query.get_or_404(entry_id)
+    new_name = request.form.get('name', '').strip()
+    new_specialty = request.form.get('specialty', '').strip() or None
+
+    if not new_name:
+        flash('Name is required.', 'danger')
+        return redirect(url_for('lookups'))
+
+    try:
+        entry.name = new_name
+        if table == 'surgeons' and hasattr(entry, 'specialty'):
+            entry.specialty = new_specialty
+        db.session.commit()
+        flash(f'{table.replace("_", " ").title()[:-1]} updated successfully!', 'success')
+    except IntegrityError:
+        db.session.rollback()
+        flash(f'A {table.replace("_", " ")[:-1]} with that name already exists.', 'danger')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating: {str(e)}', 'danger')
+
+    return redirect(url_for('lookups'))
+
 
 @app.route('/lookups/<string:table>/<int:entry_id>/delete', methods=['POST'])
 def delete_lookup(table, entry_id):
