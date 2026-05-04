@@ -135,7 +135,7 @@ class Surgery(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     implants = db.relationship('Implant', backref='surgery', cascade='all, delete-orphan', lazy=True)
-    research_projects = db.relationship('ResearchProject', secondary=surgery_research_projects, backref='surgeries', lazy='dynamic')
+    research_projects = db.relationship('ResearchProject', secondary='surgery_research_projects', backref='surgeries', lazy='dynamic')
 
 class Implant(db.Model):
     __tablename__ = 'implants'
