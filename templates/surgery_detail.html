@@ -66,6 +66,11 @@
             <i class="bi bi-journal-text me-1"></i> Research Projects
         </button>
     </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="complications-tab" data-bs-toggle="tab" data-bs-target="#complications" type="button" role="tab">
+            <i class="bi bi-exclamation-triangle me-1"></i> Complications
+        </button>
+    </li>
 </ul>
 
 <div class="tab-content" id="surgeryTabsContent">
@@ -306,27 +311,6 @@
                 </div>
                 {% endif %}
 
-                <!-- Add Research Project Form -->
-                <div class="border-top pt-3 mt-2">
-                    <h6 class="mb-2">Assign Research Project to this Surgery</h6>
-                    <form method="POST" action="{{ url_for('add_research_project_to_surgery', surgery_id=surgery.id) }}" class="row g-2">
-                        <div class="col-md-8">
-                            <select name="research_project_id" class="form-select form-select-sm" required>
-                                <option value="">Select a research project...</option>
-                                {% for project in research_projects %}
-                                <option value="{{ project.id }}">{{ project.name }} {% if project.sponsor %}({{ project.sponsor }}){% endif %}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <button type="submit" class="btn btn-success btn-sm w-100">
-                                <i class="bi bi-plus-circle me-1"></i> Assign to Surgery
-                            </button>
-                        </div>
-                    </form>
-                    <small class="text-muted">Only projects from the central Research Projects table can be assigned.</small>
-                </div>
-
                 <div class="mt-3">
                     <a href="{{ url_for('research_projects') }}" class="btn btn-outline-success btn-sm">
                         <i class="bi bi-gear me-1"></i> Manage All Research Projects
@@ -336,6 +320,58 @@
         </div>
 
     </div> <!-- End Research Projects Tab -->
+
+    <!-- Complications Tab -->
+    <div class="tab-pane fade" id="complications" role="tabpanel">
+
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Complications</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Record any complications that occurred. Use Yes/No toggles. Pre-filled from previous surgery if available.</p>
+                
+                <form method="POST" action="{{ url_for('save_complications', surgery_id=surgery.id) }}">
+                    <div class="row g-2">
+                        {% set complications_list = [
+                            ('superficial_infection', 'Superficial Surgical Site Infection'),
+                            ('deep_infection_pji', 'Deep Infection / Periprosthetic Joint Infection (PJI)'),
+                            ('dislocation_instability', 'Dislocation / Instability'),
+                            ('periprosthetic_fracture', 'Periprosthetic Fracture'),
+                            ('nerve_injury', 'Nerve Injury / Palsy'),
+                            ('vascular_injury', 'Vascular Injury'),
+                            ('dvt_pe', 'DVT / Pulmonary Embolism'),
+                            ('wound_dehiscence_hematoma', 'Wound Dehiscence / Hematoma'),
+                            ('stiffness_arthrofibrosis', 'Stiffness / Arthrofibrosis'),
+                            ('heterotopic_ossification', 'Heterotopic Ossification'),
+                            ('aseptic_loosening_early', 'Early Aseptic Loosening'),
+                            ('other_complication', 'Other Complication')
+                        ] %}
+                        
+                        {% for key, label in complications_list %}
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
+                                       {% if surgery.complications and surgery.complications.get(key) == 'yes' %}checked{% endif %}>
+                                <label class="form-check-label" for="comp-{{ key }}">
+                                    {{ label }}
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <hr>
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-save me-1"></i> Save Complications
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div> <!-- End Complications Tab -->
 
 </div> <!-- End tab-content -->
 

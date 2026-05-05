@@ -132,6 +132,9 @@ class Surgery(db.Model):
     elixhauser_score = db.Column(db.Integer, default=0)
     comorbidities = db.Column(db.JSON, default={})  # Stores Yes/No for each comorbidity
     
+    # Complications
+    complications = db.Column(db.JSON, default={})  # Stores Yes/No for each complication
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     implants = db.relationship('Implant', backref='surgery', cascade='all, delete-orphan', lazy=True)
@@ -1134,6 +1137,45 @@ def delete_research_project(project_id):
         db.session.rollback()
         flash(f'Cannot delete: This project is still linked to surgeries. {str(e)}', 'danger')
     return redirect(url_for('research_projects'))
+
+
+# ---------- Complications ----------
+@app.route('/surgeries/<int:surgery_id>/complications', methods=['POST'])
+def save_complications(surgery_id):
+    """Save complications for a surgery"""
+    surgery = Surgery.query.get_or_404(surgery_id)
+    try:
+        complications = {}
+        
+        # Common arthroplasty complications (Yes/No toggles)
+        complication_keys = [
+            'superficial_infection',
+            'deep_infection_pji',
+            'dislocation_instability',
+            'periprosthetic_fracture',
+            'nerve_injury',
+            'vascular_injury',
+            'dvt_pe',
+            'wound_dehiscence_hematoma',
+            'stiffness_arthrofibrosis',
+            'heterotopic_ossification',
+            'aseptic_loosening_early',
+            'other_complication'
+        ]
+        
+        for key in complication_keys:
+            value = request.form.get(key, 'no')
+            complications[key] = value
+        
+        surgery.complications = complications
+        db.session.commit()
+        
+        flash('Complications saved successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error saving complications: {str(e)}', 'danger')
+    
+    return redirect(url_for('surgery_detail', surgery_id=surgery_id))
 
 
 # ---------- Health Check (for hosting platforms) ----------
