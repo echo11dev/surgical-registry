@@ -329,23 +329,36 @@
                 <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Complications</h5>
             </div>
             <div class="card-body">
-                <p class="text-muted small">Record any complications that occurred. Use Yes/No toggles. Pre-filled from previous surgery if available.</p>
+                <p class="text-muted small">Record any complications that occurred for this surgery using Yes/No toggles. Based on standardized lists from The Knee Society and The Hip Society.</p>
                 
                 <form method="POST" action="{{ url_for('save_complications', surgery_id=surgery.id) }}">
                     <div class="row g-2">
                         {% set complications_list = [
-                            ('superficial_infection', 'Superficial Surgical Site Infection'),
-                            ('deep_infection_pji', 'Deep Infection / Periprosthetic Joint Infection (PJI)'),
-                            ('dislocation_instability', 'Dislocation / Instability'),
-                            ('periprosthetic_fracture', 'Periprosthetic Fracture'),
-                            ('nerve_injury', 'Nerve Injury / Palsy'),
+                            ('bleeding', 'Bleeding'),
+                            ('wound_complication', 'Wound Complication'),
+                            ('thromboembolic_disease', 'Thromboembolic Disease'),
+                            ('neural_deficit', 'Neural Deficit'),
                             ('vascular_injury', 'Vascular Injury'),
-                            ('dvt_pe', 'DVT / Pulmonary Embolism'),
-                            ('wound_dehiscence_hematoma', 'Wound Dehiscence / Hematoma'),
-                            ('stiffness_arthrofibrosis', 'Stiffness / Arthrofibrosis'),
+                            ('medial_collateral_ligament_injury', 'Medial Collateral Ligament Injury'),
+                            ('instability', 'Instability / Dislocation'),
+                            ('malalignment', 'Malalignment'),
+                            ('stiffness', 'Stiffness'),
+                            ('deep_periprosthetic_joint_infection', 'Deep Periprosthetic Joint Infection'),
+                            ('periprosthetic_fracture', 'Periprosthetic Fracture'),
+                            ('extensor_mechanism_disruption', 'Extensor Mechanism Disruption'),
+                            ('patellofemoral_dislocation', 'Patellofemoral Dislocation'),
+                            ('tibiofemoral_dislocation', 'Tibiofemoral Dislocation'),
+                            ('bearing_surface_wear', 'Bearing Surface Wear'),
+                            ('osteolysis', 'Osteolysis'),
+                            ('implant_loosening', 'Implant Loosening'),
+                            ('implant_fracture_tibial_insert_dissociation', 'Implant Fracture / Tibial Insert Dissociation'),
+                            ('cup_liner_dissociation', 'Cup-Liner Dissociation'),
+                            ('abductor_muscle_disruption', 'Abductor Muscle Disruption'),
                             ('heterotopic_ossification', 'Heterotopic Ossification'),
-                            ('aseptic_loosening_early', 'Early Aseptic Loosening'),
-                            ('other_complication', 'Other Complication')
+                            ('reoperation', 'Reoperation'),
+                            ('revision', 'Revision'),
+                            ('readmission', 'Readmission'),
+                            ('death', 'Death')
                         ] %}
                         
                         {% for key, label in complications_list %}
