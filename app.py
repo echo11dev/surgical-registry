@@ -1147,20 +1147,33 @@ def save_complications(surgery_id):
     try:
         complications = {}
         
-        # Common arthroplasty complications (Yes/No toggles)
+        # Full standardized complications from Knee Society (TKA) and Hip Society (THA)
         complication_keys = [
-            'superficial_infection',
-            'deep_infection_pji',
-            'dislocation_instability',
-            'periprosthetic_fracture',
-            'nerve_injury',
+            'bleeding',
+            'wound_complication',
+            'thromboembolic_disease',
+            'neural_deficit',
             'vascular_injury',
-            'dvt_pe',
-            'wound_dehiscence_hematoma',
-            'stiffness_arthrofibrosis',
+            'medial_collateral_ligament_injury',
+            'instability',
+            'malalignment',
+            'stiffness',
+            'deep_periprosthetic_joint_infection',
+            'periprosthetic_fracture',
+            'extensor_mechanism_disruption',
+            'patellofemoral_dislocation',
+            'tibiofemoral_dislocation',
+            'bearing_surface_wear',
+            'osteolysis',
+            'implant_loosening',
+            'implant_fracture_tibial_insert_dissociation',
+            'cup_liner_dissociation',
+            'abductor_muscle_disruption',
             'heterotopic_ossification',
-            'aseptic_loosening_early',
-            'other_complication'
+            'reoperation',
+            'revision',
+            'readmission',
+            'death'
         ]
         
         for key in complication_keys:
