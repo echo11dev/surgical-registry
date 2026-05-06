@@ -18,7 +18,7 @@
         <div class="row">
             <div class="col-md-8">
                 <div class="d-flex align-items-center mb-2">
-                    <h3 class="mb-0 me-3">{{ surgery.procedure_type.name if surgery.procedure_type else 'Surgical Procedure' }}</h3>
+                    <h3 class="mb-0 me-3">{{ surgery.procedure_type.name if surgery.procedure_type else 'Surgical Procedure' }}{% if surgery.side %} ({{ surgery.side }}){% endif %}</h3>
                     <span class="badge bg-primary fs-6">{{ surgery.surgery_date.strftime('%B %d, %Y') }}</span>
                 </div>
                 <div class="text-muted">
@@ -140,50 +140,6 @@
         <i class="bi bi-cpu text-muted" style="font-size: 4rem;"></i>
         <h5 class="mt-3">No implants recorded for this surgery</h5>
         <p class="text-muted">Add implants using the button above.</p>
-    </div>
-</div>
-{% endif %}
-
-<!-- Mandatory Implants Checklist for Primary Surgeries -->
-{% if surgery.surgery_type == 'Primary' %}
-<div class="card mt-4 border-warning">
-    <div class="card-header bg-warning text-dark">
-        <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Mandatory Implants Checklist</h6>
-    </div>
-    <div class="card-body">
-        {% if surgery.joint == 'Hip' %}
-            <div class="row">
-                <div class="col-md-3">
-                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Acetabular Shell')|list %}bg-success{% else %}bg-danger{% endif %}">Acetabular Shell</span>
-                </div>
-                <div class="col-md-3">
-                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Acetabular Liner')|list %}bg-success{% else %}bg-danger{% endif %}">Acetabular Liner</span>
-                </div>
-                <div class="col-md-3">
-                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Femoral Stem')|list %}bg-success{% else %}bg-danger{% endif %}">Femoral Stem</span>
-                </div>
-                <div class="col-md-3">
-                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Femoral Head')|list %}bg-success{% else %}bg-danger{% endif %}">Femoral Head</span>
-                </div>
-            </div>
-            <small class="text-muted">All 4 components are required for Primary Hip Arthroplasty.</small>
-        {% elif surgery.joint == 'Knee' %}
-            <div class="row">
-                <div class="col-md-3">
-                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Femoral Component (Knee)')|list %}bg-success{% else %}bg-danger{% endif %}">Femoral Component</span>
-                </div>
-                <div class="col-md-3">
-                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Tibial Component')|list %}bg-success{% else %}bg-danger{% endif %}">Tibial Component</span>
-                </div>
-                <div class="col-md-3">
-                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Tibial Liner')|list %}bg-success{% else %}bg-danger{% endif %}">Tibial Liner</span>
-                </div>
-                <div class="col-md-3">
-                    <span class="badge {% if implants|selectattr('implant_type.name', 'equalto', 'Patellar Component')|list %}bg-success{% else %}bg-secondary{% endif %}">Patellar Component (Optional)</span>
-                </div>
-            </div>
-            <small class="text-muted">Femoral, Tibial, and Liner are required. Patellar is optional for Primary Knee.</small>
-        {% endif %}
     </div>
 </div>
 {% endif %}

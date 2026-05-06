@@ -84,7 +84,7 @@
                         {% if patient.email %}<div class="small text-muted">{{ patient.email }}</div>{% endif %}
                     </td>
                     <td>
-                        <span class="badge bg-light text-dark border">{{ patient.surgeries|length }} surgery{% if patient.surgeries|length != 1 %}ies{% endif %}</span>
+                        <span class="badge bg-light text-dark border">{{ patient.surgeries|length }} surg{{ 'ery' if patient.surgeries|length == 1 else 'eries' }}</span>
                     </td>
                     <td>
                         <small class="text-muted">{{ patient.created_at.strftime('%b %d, %Y') }}</small>

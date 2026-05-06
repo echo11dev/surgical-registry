@@ -20,7 +20,13 @@
                         <div class="d-flex align-items-center gap-3 text-muted">
                             <span><i class="bi bi-card-text me-1"></i> {{ patient.mrn }}</span>
                             <span><i class="bi bi-calendar me-1"></i> {{ patient.dob.strftime('%B %d, %Y') }} ({{ patient.age }} yrs)</span>
+                            {% if patient.sex == 'Male' %}
+                            <span><i class="bi bi-gender-male text-primary me-1"></i> Male</span>
+                            {% elif patient.sex == 'Female' %}
+                            <span><i class="bi bi-gender-female text-danger me-1"></i> Female</span>
+                            {% else %}
                             <span><i class="bi bi-gender-ambiguous me-1"></i> {{ patient.sex or '—' }}</span>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="text-end">
@@ -76,7 +82,7 @@
                     </td>
                     <td>
                         {% if surgery.procedure_type %}
-                            <span class="badge badge-procedure">{{ surgery.procedure_type.name }}</span>
+                            <span class="badge badge-procedure">{{ surgery.procedure_type.name }}{% if surgery.side %} ({{ surgery.side }}){% endif %}</span>
                         {% else %}
                             <span class="text-muted">—</span>
                         {% endif %}
@@ -279,7 +285,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Edit Surgery • {{ surgery.surgery_date.strftime('%b %d, %Y') }}</h5>
+                <h5 class="modal-title">Edit Surgery • {{ surgery.surgery_date.strftime('%b %d, %Y') }}{% if surgery.side %} ({{ surgery.side }}){% endif %}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('edit_surgery', surgery_id=surgery.id) }}">

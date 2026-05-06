@@ -176,7 +176,7 @@
                                 <td>{{ surgery.surgery_date.strftime('%b %d, %Y') }}</td>
                                 <td>
                                     {% if surgery.procedure_type %}
-                                        <span class="badge badge-procedure">{{ surgery.procedure_type.name }}</span>
+                                        <span class="badge badge-procedure">{{ surgery.procedure_type.name }}{% if surgery.side %} ({{ surgery.side }}){% endif %}</span>
                                     {% else %}
                                         <span class="text-muted">—</span>
                                     {% endif %}
