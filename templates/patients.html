@@ -68,8 +68,16 @@
                     </td>
                     <td><code class="text-dark">{{ patient.mrn }}</code></td>
                     <td>
-                        {{ patient.age }} yrs<br>
-                        <small class="text-muted">{{ patient.gender.name if patient.gender else '—' }}</small>
+                        <div>{{ patient.age }} yrs</div>
+                        <div class="small mt-1">
+                            {% if patient.sex == 'Male' %}
+                                <i class="bi bi-gender-male text-primary"></i> Male
+                            {% elif patient.sex == 'Female' %}
+                                <i class="bi bi-gender-female text-danger"></i> Female
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </div>
                     </td>
                     <td>
                         {% if patient.phone %}<div><i class="bi bi-telephone me-1 text-muted"></i>{{ patient.phone }}</div>{% endif %}

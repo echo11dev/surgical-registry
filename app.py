@@ -414,6 +414,35 @@ def dashboard():
     
     lookups = get_all_lookups()
     
+    # Complication & Outcome Metrics
+    all_surgeries = Surgery.query.all()
+    total_surgeries = len(all_surgeries)
+    
+    if total_surgeries > 0:
+        # Overall complication rate (any 'yes' in complications JSON)
+        surgeries_with_any_complication = sum(
+            1 for s in all_surgeries 
+            if s.complications and any(v == 'yes' for v in s.complications.values())
+        )
+        # Deep periprosthetic joint infection
+        deep_infection_count = sum(
+            1 for s in all_surgeries 
+            if s.complications and s.complications.get('deep_periprosthetic_joint_infection') == 'yes'
+        )
+        # 30-day readmission
+        readmission_30d_count = sum(
+            1 for s in all_surgeries 
+            if s.complications and s.complications.get('readmission') == 'yes'
+        )
+        
+        stats['complication_rate'] = round((surgeries_with_any_complication / total_surgeries) * 100, 1)
+        stats['deep_infection_rate'] = round((deep_infection_count / total_surgeries) * 100, 1)
+        stats['readmission_30d_rate'] = round((readmission_30d_count / total_surgeries) * 100, 1)
+    else:
+        stats['complication_rate'] = 0
+        stats['deep_infection_rate'] = 0
+        stats['readmission_30d_rate'] = 0
+    
     return render_template('index.html', 
                           stats=stats, 
                           recent_surgeries=recent_surgeries,
