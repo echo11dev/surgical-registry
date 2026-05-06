@@ -436,6 +436,7 @@ def seed_initial_data():
     s2 = Surgery.query.get(2)
     s3 = Surgery.query.get(3)
     s4 = Surgery.query.get(4)
+    s5 = Surgery.query.get(5)
 
     if rp_oa:
         if rp_oa not in s1.research_projects: s1.research_projects.append(rp_oa)
