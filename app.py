@@ -718,8 +718,8 @@ def delete_implant(implant_id):
 def lookups():
     """Manage all lookup tables"""
     lookups = get_all_lookups()
-    research_projects_count = ResearchProject.query.count()
-    return render_template('lookups.html', lookups=lookups, research_projects_count=research_projects_count)
+    research_projects = ResearchProject.query.order_by(ResearchProject.name).all()
+    return render_template('lookups.html', lookups=lookups, research_projects=research_projects)
 
 @app.route('/lookups/<string:table>', methods=['POST'])
 def add_lookup(table):
@@ -831,6 +831,45 @@ def delete_lookup(table, entry_id):
         flash(f'Error: {str(e)}', 'danger')
     
     return redirect(url_for('lookups'))
+
+
+# ---------- Research Projects inside Tables Management ----------
+@app.route('/lookups/research-projects/add', methods=['POST'])
+def add_research_project_from_lookups():
+    """Add a new research project from the Tables page"""
+    name = request.form.get('name', '').strip()
+    sponsor = request.form.get('sponsor', '').strip() or None
+    description = request.form.get('description', '').strip() or None
+
+    if not name:
+        flash('Project name is required.', 'danger')
+        return redirect(url_for('lookups'))
+
+    if ResearchProject.query.filter_by(name=name).first():
+        flash('A research project with this name already exists.', 'danger')
+        return redirect(url_for('lookups'))
+
+    project = ResearchProject(name=name, sponsor=sponsor, description=description)
+    db.session.add(project)
+    db.session.commit()
+    flash(f'Research project "{name}" created successfully.', 'success')
+    return redirect(url_for('lookups') + '#research')
+
+
+@app.route('/lookups/research-projects/<int:project_id>/delete', methods=['POST'])
+def delete_research_project_from_lookups(project_id):
+    """Delete a research project from the Tables page"""
+    project = ResearchProject.query.get_or_404(project_id)
+    name = project.name
+    try:
+        db.session.delete(project)
+        db.session.commit()
+        flash(f'Research project "{name}" deleted.', 'warning')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Cannot delete: This project is still linked to surgeries. {str(e)}', 'danger')
+    return redirect(url_for('lookups') + '#research')
+
 
 # ---------- IMPLANT MASTER (Dedicated CRUD page) ----------
 @app.route('/implant-master')
@@ -1092,51 +1131,6 @@ def remove_research_project_from_surgery(surgery_id, project_id):
         flash(f'Research project "{project.name}" removed from this surgery.', 'warning')
 
     return redirect(url_for('surgery_detail', surgery_id=surgery_id))
-
-
-# ---------- Research Projects Management (Lookup Table) ----------
-@app.route('/research-projects')
-def research_projects():
-    """Management page for all Research Projects (lookup table)"""
-    projects = ResearchProject.query.order_by(ResearchProject.name).all()
-    return render_template('research_projects.html', projects=projects)
-
-
-@app.route('/research-projects/add', methods=['POST'])
-def add_research_project():
-    """Add a new research project (global)"""
-    name = request.form.get('name', '').strip()
-    sponsor = request.form.get('sponsor', '').strip() or None
-    description = request.form.get('description', '').strip() or None
-
-    if not name:
-        flash('Project name is required.', 'danger')
-        return redirect(url_for('research_projects'))
-
-    if ResearchProject.query.filter_by(name=name).first():
-        flash('A research project with this name already exists.', 'danger')
-        return redirect(url_for('research_projects'))
-
-    project = ResearchProject(name=name, sponsor=sponsor, description=description)
-    db.session.add(project)
-    db.session.commit()
-    flash(f'Research project "{name}" created successfully.', 'success')
-    return redirect(url_for('research_projects'))
-
-
-@app.route('/research-projects/<int:project_id>/delete', methods=['POST'])
-def delete_research_project(project_id):
-    """Delete a research project"""
-    project = ResearchProject.query.get_or_404(project_id)
-    name = project.name
-    try:
-        db.session.delete(project)
-        db.session.commit()
-        flash(f'Research project "{name}" deleted.', 'warning')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Cannot delete: This project is still linked to surgeries. {str(e)}', 'danger')
-    return redirect(url_for('research_projects'))
 
 
 # ---------- Complications ----------
