@@ -89,7 +89,7 @@
 
 <!-- Complication Metrics Row -->
 <div class="row g-3 mt-1 mb-4">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card stats-card border-0">
             <div class="card-body py-3">
                 <div class="d-flex justify-content-between align-items-center">
@@ -102,7 +102,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card stats-card border-0">
             <div class="card-body py-3">
                 <div class="d-flex justify-content-between align-items-center">
@@ -115,15 +115,28 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card stats-card border-0">
             <div class="card-body py-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-muted mb-1 small">Total Surgeries Analyzed</h6>
-                        <h3 class="mb-0 fw-bold">{{ stats.surgeries }}</h3>
+                        <h6 class="text-muted mb-1 small">Revision Burden</h6>
+                        <h3 class="mb-0 fw-bold">{{ stats.revision_burden }}<span class="fs-6">%</span></h3>
                     </div>
-                    <i class="bi bi-clipboard-data text-primary" style="font-size: 2rem; opacity: 0.3;"></i>
+                    <i class="bi bi-arrow-repeat text-warning" style="font-size: 2rem; opacity: 0.3;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card border-0">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1 small">% Outpatient Joints</h6>
+                        <h3 class="mb-0 fw-bold">{{ stats.outpatient_joint_percent }}<span class="fs-6">%</span></h3>
+                    </div>
+                    <i class="bi bi-clock-history text-success" style="font-size: 2rem; opacity: 0.3;"></i>
                 </div>
             </div>
         </div>

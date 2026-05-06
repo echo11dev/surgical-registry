@@ -135,6 +135,9 @@ class Surgery(db.Model):
     # Complications
     complications = db.Column(db.JSON, default={})  # Stores Yes/No for each complication
     
+    # Outpatient / Same-day discharge
+    outpatient = db.Column(db.Boolean, default=False)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     implants = db.relationship('Implant', backref='surgery', cascade='all, delete-orphan', lazy=True)
@@ -278,6 +281,42 @@ def seed_initial_data():
             'first_name': 'Aisha', 'last_name': 'Khan',
             'dob': date(1980, 2, 15), 'sex': 'Female',
             'phone': '(555) 321-0987', 'email': 'aisha.khan@email.com'
+        },
+        {
+            'mrn': 'MRN-2024-005',
+            'first_name': 'Robert', 'last_name': 'Chen',
+            'dob': date(1968, 7, 3), 'sex': 'Male',
+            'phone': '(555) 654-3210', 'email': 'robert.chen@email.com'
+        },
+        {
+            'mrn': 'MRN-2024-006',
+            'first_name': 'Linda', 'last_name': 'Martinez',
+            'dob': date(1975, 11, 19), 'sex': 'Female',
+            'phone': '(555) 789-0123', 'email': 'linda.martinez@email.com'
+        },
+        {
+            'mrn': 'MRN-2024-007',
+            'first_name': 'William', 'last_name': 'Brown',
+            'dob': date(1955, 3, 22), 'sex': 'Male',
+            'phone': '(555) 234-5678', 'email': 'william.brown@email.com'
+        },
+        {
+            'mrn': 'MRN-2024-008',
+            'first_name': 'Patricia', 'last_name': 'Wong',
+            'dob': date(1962, 8, 14), 'sex': 'Female',
+            'phone': '(555) 567-8901', 'email': 'patricia.wong@email.com'
+        },
+        {
+            'mrn': 'MRN-2024-009',
+            'first_name': 'Michael', 'last_name': 'Thompson',
+            'dob': date(1970, 5, 9), 'sex': 'Male',
+            'phone': '(555) 890-1234', 'email': 'michael.thompson@email.com'
+        },
+        {
+            'mrn': 'MRN-2024-010',
+            'first_name': 'Susan', 'last_name': 'Miller',
+            'dob': date(1959, 12, 1), 'sex': 'Female',
+            'phone': '(555) 345-6789', 'email': 'susan.miller@email.com'
         }
     ]
 
@@ -348,6 +387,67 @@ def seed_initial_data():
     for i_data in sample_implants:
         implant = Implant(**i_data)
         db.session.add(implant)
+
+    db.session.commit()
+
+    # === Enhance sample surgeries with orthopedic fields, complications, outpatient, and research projects ===
+    # Update existing surgeries with proper metadata
+    surgery_updates = {
+        1: {'joint': 'Hip', 'side': 'Right', 'surgery_type': 'Primary', 'outpatient': False,
+            'complications': {'deep_periprosthetic_joint_infection': 'yes', 'readmission': 'yes'}},
+        2: {'joint': 'Knee', 'side': 'Left', 'surgery_type': 'Primary', 'outpatient': True,
+            'complications': {'stiffness': 'yes'}},
+        3: {'joint': 'Hip', 'side': 'Left', 'surgery_type': 'Revision', 'revision_reason': 'Aseptic',
+            'outpatient': False, 'complications': {'reoperation': 'yes', 'revision': 'yes'}},
+        4: {'joint': 'Knee', 'side': 'Right', 'surgery_type': 'Primary', 'outpatient': False},
+        5: {'joint': 'Knee', 'side': 'Left', 'surgery_type': 'Primary', 'outpatient': True},
+    }
+
+    for sid, updates in surgery_updates.items():
+        s = Surgery.query.get(sid)
+        if s:
+            for key, val in updates.items():
+                if key == 'complications':
+                    s.complications = val
+                else:
+                    setattr(s, key, val)
+
+    db.session.commit()
+
+    # Create Research Projects (if not exist)
+    research_data = [
+        {'name': 'OA-2025-Registry', 'sponsor': 'NIH', 'description': 'Long-term outcomes in primary joint arthroplasty'},
+        {'name': 'REV-2024-Study', 'sponsor': 'Industry', 'description': 'Revision burden and outcomes in THA/TKA'},
+        {'name': 'Outpatient-Joints', 'sponsor': 'AAHKS', 'description': 'Safety and outcomes of same-day discharge joint replacement'},
+        {'name': 'Infection-Prevention', 'sponsor': 'CDC', 'description': 'Reducing periprosthetic joint infection rates'},
+    ]
+    for rp_data in research_data:
+        if not ResearchProject.query.filter_by(name=rp_data['name']).first():
+            db.session.add(ResearchProject(**rp_data))
+    db.session.commit()
+
+    # Link multiple research projects to some surgeries
+    rp_oa = ResearchProject.query.filter_by(name='OA-2025-Registry').first()
+    rp_rev = ResearchProject.query.filter_by(name='REV-2024-Study').first()
+    rp_out = ResearchProject.query.filter_by(name='Outpatient-Joints').first()
+    rp_inf = ResearchProject.query.filter_by(name='Infection-Prevention').first()
+
+    s1 = Surgery.query.get(1)
+    s2 = Surgery.query.get(2)
+    s3 = Surgery.query.get(3)
+    s4 = Surgery.query.get(4)
+
+    if rp_oa:
+        if rp_oa not in s1.research_projects: s1.research_projects.append(rp_oa)
+        if rp_oa not in s2.research_projects: s2.research_projects.append(rp_oa)
+    if rp_rev:
+        if rp_rev not in s3.research_projects: s3.research_projects.append(rp_rev)
+        if rp_rev not in s1.research_projects: s1.research_projects.append(rp_rev)  # multiple on surgery 1
+    if rp_out:
+        if rp_out not in s2.research_projects: s2.research_projects.append(rp_out)
+        if rp_out not in s5.research_projects: s5.research_projects.append(rp_out)
+    if rp_inf:
+        if rp_inf not in s3.research_projects: s3.research_projects.append(rp_inf)
 
     db.session.commit()
 
@@ -438,10 +538,25 @@ def dashboard():
         stats['complication_rate'] = round((surgeries_with_any_complication / total_surgeries) * 100, 1)
         stats['deep_infection_rate'] = round((deep_infection_count / total_surgeries) * 100, 1)
         stats['readmission_30d_rate'] = round((readmission_30d_count / total_surgeries) * 100, 1)
+
+        # Revision Burden (% of surgeries that are revisions)
+        revision_count = sum(1 for s in all_surgeries if getattr(s, 'surgery_type', None) == 'Revision')
+        stats['revision_burden'] = round((revision_count / total_surgeries) * 100, 1)
+
+        # % Outpatient Joints (THA, TKA, UKA that were outpatient/same-day)
+        joint_keywords = ['Hip', 'Knee', 'UKA']
+        joint_surgeries = [
+            s for s in all_surgeries 
+            if s.procedure_type and any(kw in (s.procedure_type.name or '') for kw in joint_keywords)
+        ]
+        outpatient_joints = sum(1 for s in joint_surgeries if getattr(s, 'outpatient', False))
+        stats['outpatient_joint_percent'] = round((outpatient_joints / len(joint_surgeries) * 100), 1) if joint_surgeries else 0
     else:
         stats['complication_rate'] = 0
         stats['deep_infection_rate'] = 0
         stats['readmission_30d_rate'] = 0
+        stats['revision_burden'] = 0
+        stats['outpatient_joint_percent'] = 0
     
     return render_template('index.html', 
                           stats=stats, 
