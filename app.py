@@ -1098,23 +1098,42 @@ def save_comorbidities(surgery_id):
 # ---------- Research Projects ----------
 @app.route('/surgery/<int:surgery_id>/research-projects/add', methods=['POST'])
 def add_research_project_to_surgery(surgery_id):
-    """Assign an existing research project to a surgery"""
+    """Assign one or more research projects to a surgery (supports multiple dropdowns)"""
     surgery = Surgery.query.get_or_404(surgery_id)
-    project_id = request.form.get('research_project_id', type=int)
+    # Support multiple from dynamic dropdowns or single legacy
+    project_ids = request.form.getlist('research_project_ids')
+    if not project_ids:
+        single_id = request.form.get('research_project_id', type=int)
+        if single_id:
+            project_ids = [str(single_id)]
 
-    if not project_id:
-        flash('Please select a research project.', 'danger')
+    if not project_ids or all(not pid for pid in project_ids):
+        flash('Please select at least one research project.', 'danger')
         return redirect(url_for('surgery_detail', surgery_id=surgery_id))
 
-    project = ResearchProject.query.get_or_404(project_id)
+    added = []
+    skipped = []
+    for pid_str in project_ids:
+        if not pid_str:
+            continue
+        try:
+            pid = int(pid_str)
+            project = ResearchProject.query.get(pid)
+            if project and project not in surgery.research_projects:
+                surgery.research_projects.append(project)
+                added.append(project.name)
+            else:
+                skipped.append(project.name if project else f'ID {pid}')
+        except (ValueError, TypeError):
+            skipped.append(f'invalid ID')
 
-    # Add to surgery if not already added
-    if project not in surgery.research_projects:
-        surgery.research_projects.append(project)
+    if added:
         db.session.commit()
-        flash(f'Research project "{project.name}" assigned to this surgery.', 'success')
-    else:
-        flash('This research project is already assigned to this surgery.', 'info')
+        flash(f'Added research project(s): {", ".join(added)}', 'success')
+    if skipped:
+        flash(f'Skipped (already assigned or invalid): {", ".join(skipped)}', 'info')
+    if not added and not skipped:
+        flash('No new research projects were added.', 'warning')
 
     return redirect(url_for('surgery_detail', surgery_id=surgery_id))
 
