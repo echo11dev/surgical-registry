@@ -168,9 +168,15 @@
     <!-- Research Projects -->
     <div class="tab-pane fade" id="research" role="tabpanel">
         <div class="card">
-            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-journal-text me-2"></i>Research Projects</span>
-                <span class="badge bg-light text-dark">{{ research_projects|length }}</span>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Research Projects</span>
+                <button class="btn btn-sm btn-primary" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#addModal" 
+                        data-table="research_projects" 
+                        data-title="Add Research Project">
+                    + Add
+                </button>
             </div>
             <div class="card-body p-0">
                 {% if research_projects %}
@@ -208,32 +214,6 @@
                 {% endif %}
             </div>
         </div>
-
-        <!-- Add New Research Project Form -->
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Add New Research Project</h6>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('add_research_project_from_lookups') }}">
-                    <div class="row g-3">
-                        <div class="col-md-5">
-                            <label class="form-label">Project Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" placeholder="e.g. OA-2025-Registry" required>
-                        </div>
-                        <div class="col-md-7">
-                            <label class="form-label">Description</label>
-                            <div class="input-group">
-                                <input type="text" name="description" class="form-control" placeholder="Brief description of the study">
-                                <button type="submit" class="btn btn-success">
-                                    <i class="bi bi-plus-lg"></i> Add
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -254,6 +234,10 @@
                     <div id="specialtyField" class="mb-3 d-none">
                         <label class="form-label">Specialty (for surgeons)</label>
                         <input type="text" name="specialty" class="form-control" placeholder="e.g. Orthopedic Surgery - Joints">
+                    </div>
+                    <div id="descriptionField" class="mb-3 d-none">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Brief description of the research project"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -303,7 +287,13 @@
         
         document.getElementById('addModalTitle').textContent = title;
         const form = document.getElementById('addLookupForm');
-        form.action = `/lookups/${table}`;
+        
+        // Special handling for Research Projects - use dedicated route and show description
+        if (table === 'research_projects') {
+            form.action = "{{ url_for('add_research_project_from_lookups') }}";
+        } else {
+            form.action = `/lookups/${table}`;
+        }
         
         // Show specialty field only for surgeons
         const specialtyField = document.getElementById('specialtyField');
@@ -311,6 +301,14 @@
             specialtyField.classList.remove('d-none');
         } else {
             specialtyField.classList.add('d-none');
+        }
+        
+        // Show description field only for research_projects
+        const descriptionField = document.getElementById('descriptionField');
+        if (table === 'research_projects') {
+            descriptionField.classList.remove('d-none');
+        } else {
+            descriptionField.classList.add('d-none');
         }
     });
 </script>

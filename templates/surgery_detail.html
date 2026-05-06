@@ -309,49 +309,28 @@
                 </div>
                 {% endif %}
 
-                <!-- Add Research Projects via Dropdowns -->
+                <!-- Add Research Project -->
                 <div class="mt-4 pt-3 border-top">
-                    <h6 class="mb-2"><i class="bi bi-plus-circle me-2"></i>Add Research Projects</h6>
+                    <h6 class="mb-2"><i class="bi bi-plus-circle me-2"></i>Add Research Project</h6>
                     <form method="POST" action="{{ url_for('add_research_project_to_surgery', surgery_id=surgery.id) }}">
-                        <div id="rp-dropdown-container">
-                            <div class="mb-2 rp-dropdown">
-                                <select name="research_project_ids" class="form-select form-select-sm">
-                                    <option value="">-- Select research project --</option>
-                                    {% for rp in research_projects %}
-                                    <option value="{{ rp.id }}">{{ rp.name }}{% if rp.description %} — {{ rp.description|truncate(60, True) }}{% endif %}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
+                        <div class="mb-2">
+                            <select name="research_project_ids" class="form-select form-select-sm">
+                                <option value="">-- Select research project --</option>
+                                {% for rp in research_projects %}
+                                <option value="{{ rp.id }}">{{ rp.name }}{% if rp.description %} — {{ rp.description|truncate(60, True) }}{% endif %}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        <div class="d-flex flex-wrap gap-2 mt-2">
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="addResearchProjectDropdown()">
-                                <i class="bi bi-plus-lg"></i> Add Another Dropdown
-                            </button>
-                            <button type="submit" class="btn btn-success btn-sm">
-                                <i class="bi bi-check2-circle"></i> Add Selected Projects
-                            </button>
-                        </div>
+                        <button type="submit" class="btn btn-success btn-sm">
+                            <i class="bi bi-check2-circle"></i> Add to Surgery
+                        </button>
                     </form>
-                    <small class="text-muted d-block mt-1">Use dropdown(s) to select projects from the central table. Already assigned or duplicates are skipped on save.</small>
+                    <small class="text-muted d-block mt-1">Select a project from the central Research Projects table and add it to this surgery.</small>
                 </div>
             </div>
         </div>
 
     </div> <!-- End Research Projects Tab -->
-
-<script>
-function addResearchProjectDropdown() {
-    const container = document.getElementById('rp-dropdown-container');
-    if (!container) return;
-    const firstDropdown = container.querySelector('.rp-dropdown');
-    if (!firstDropdown) return;
-    const clone = firstDropdown.cloneNode(true);
-    // Clear the selected value in clone
-    const select = clone.querySelector('select');
-    if (select) select.value = '';
-    container.appendChild(clone);
-}
-</script>
 
     <!-- Complications Tab -->
     <div class="tab-pane fade" id="complications" role="tabpanel">
