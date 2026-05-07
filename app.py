@@ -6,8 +6,10 @@ with lookup tables for standardized data.
 """
 
 import os
+import csv
+import io
 from datetime import datetime, date
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_, text
@@ -239,11 +241,16 @@ def seed_initial_data():
         db.session.add(Gender(name=g))
 
     procedure_types = [
-        'Total Hip Arthroplasty (THA)',
-        'Revision Total Hip Arthroplasty',
-        'Total Knee Arthroplasty (TKA)',
-        'Revision Total Knee Arthroplasty',
-        'Unicompartmental Knee Arthroplasty (UKA)'
+        'Left Total Hip Arthroplasty',
+        'Right Total Hip Arthroplasty',
+        'Left Total Knee Arthroplasty',
+        'Right Total Knee Arthroplasty',
+        'Left Hip Hemiarthroplasty',
+        'Right Hip Hemiarthroplasty',
+        'Left Unicompartmental Knee Arthroplasty',
+        'Right Unicompartmental Knee Arthroplasty',
+        'Left Revision Hip Arthroplasty',
+        'Right Revision Knee Arthroplasty'
     ]
     for pt in procedure_types:
         db.session.add(ProcedureType(name=pt))
@@ -360,37 +367,43 @@ def seed_initial_data():
     sample_surgeries = [
         {
             'patient_id': 1, 'surgery_date': date(2024, 3, 15),
-            'procedure_type_id': 1, 'surgeon_id': 1, 'hospital_id': 1,
-            'operating_room': 'OR-3', 'duration_minutes': 145,
+            'surgeon_id': 1, 'hospital_id': 1,
+            'joint': 'Hip', 'side': 'Right', 'surgery_type': 'Primary',
             'notes': 'Primary THA, cementless fixation. Excellent bone quality.'
         },
         {
             'patient_id': 1, 'surgery_date': date(2025, 1, 22),
-            'procedure_type_id': 3, 'surgeon_id': 1, 'hospital_id': 1,
-            'operating_room': 'OR-2', 'duration_minutes': 128,
+            'surgeon_id': 1, 'hospital_id': 1,
+            'joint': 'Knee', 'side': 'Left', 'surgery_type': 'Primary',
             'notes': 'Bilateral TKA staged. Left knee first. Good ROM achieved.'
         },
         {
             'patient_id': 2, 'surgery_date': date(2024, 6, 10),
-            'procedure_type_id': 1, 'surgeon_id': 2, 'hospital_id': 2,
-            'operating_room': 'OR-5', 'duration_minutes': 195,
+            'surgeon_id': 2, 'hospital_id': 2,
+            'joint': 'Hip', 'side': 'Right', 'surgery_type': 'Revision',
             'notes': 'Revision THA with acetabular bone grafting.'
         },
         {
             'patient_id': 3, 'surgery_date': date(2024, 9, 5),
-            'procedure_type_id': 3, 'surgeon_id': 3, 'hospital_id': 3,
-            'operating_room': 'OR-1', 'duration_minutes': 87,
+            'surgeon_id': 3, 'hospital_id': 3,
+            'joint': 'Knee', 'side': 'Right', 'surgery_type': 'Primary',
             'notes': 'Primary TKA, cruciate retaining.'
         },
         {
             'patient_id': 4, 'surgery_date': date(2025, 2, 28),
-            'procedure_type_id': 5, 'surgeon_id': 4, 'hospital_id': 4,
-            'operating_room': 'OR-4', 'duration_minutes': 112,
+            'surgeon_id': 4, 'hospital_id': 4,
+            'joint': 'Knee', 'side': 'Left', 'surgery_type': 'Primary',
             'notes': 'UKA medial compartment, good alignment.'
         }
     ]
 
     for s_data in sample_surgeries:
+        # Use the new calculation to set consistent naming (avoids old redundant names)
+        proc = get_or_create_procedure_type(
+            s_data.get('side'), s_data.get('joint'), s_data.get('surgery_type')
+        )
+        if proc:
+            s_data['procedure_type_id'] = proc.id
         surgery = Surgery(**s_data)
         db.session.add(surgery)
     db.session.commit()
@@ -1404,6 +1417,109 @@ def save_complications(surgery_id):
         flash(f'Error saving complications: {str(e)}', 'danger')
     
     return redirect(url_for('surgery_detail', surgery_id=surgery_id))
+
+
+# ---------- REPORTS & CSV EXPORTS ----------
+@app.route('/reports')
+def reports():
+    """Reports dashboard with CSV export options"""
+    stats = {
+        'patients': Patient.query.count(),
+        'surgeries': Surgery.query.count(),
+        'implants': Implant.query.count(),
+    }
+    return render_template('reports.html', stats=stats)
+
+
+@app.route('/reports/export/patients')
+def export_patients_csv():
+    """Export all patients as CSV"""
+    si = io.StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['MRN', 'First Name', 'Last Name', 'Date of Birth', 'Sex', 'Age', 'Weight (kg)', 'Height (cm)', 'BMI', 'Race', 'Ethnicity', 'Phone', 'Email', 'Created'])
+
+    for p in Patient.query.order_by(Patient.last_name, Patient.first_name).all():
+        cw.writerow([
+            p.mrn,
+            p.first_name,
+            p.last_name,
+            p.dob.isoformat() if p.dob else '',
+            p.sex or '',
+            p.age,
+            p.weight_kg or '',
+            p.height_cm or '',
+            p.bmi or '',
+            p.race or '',
+            p.ethnicity or '',
+            p.phone or '',
+            p.email or '',
+            p.created_at.isoformat() if p.created_at else ''
+        ])
+
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=um_registry_patients.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
+
+
+@app.route('/reports/export/surgeries')
+def export_surgeries_csv():
+    """Export all surgeries with patient and procedure details (using algorithm names)"""
+    si = io.StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['Surgery ID', 'Patient MRN', 'Patient Name', 'Surgery Date', 'Procedure Type (Standardized)', 'Joint', 'Side', 'Surgery Type', 'Revision Reason', 'Surgeon', 'Hospital', 'Notes', 'Created'])
+
+    for s in Surgery.query.order_by(Surgery.surgery_date.desc()).all():
+        cw.writerow([
+            s.id,
+            s.patient.mrn if s.patient else '',
+            s.patient.full_name if s.patient else '',
+            s.surgery_date.isoformat() if s.surgery_date else '',
+            s.procedure_type.name if s.procedure_type else '',
+            s.joint or '',
+            s.side or '',
+            s.surgery_type or '',
+            s.revision_reason or '',
+            s.surgeon.name if s.surgeon else '',
+            s.hospital.name if s.hospital else '',
+            (s.notes or '').replace('\n', ' ').strip(),
+            s.created_at.isoformat() if s.created_at else ''
+        ])
+
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=um_registry_surgeries.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
+
+
+@app.route('/reports/export/implants')
+def export_implants_csv():
+    """Export all implants linked to surgeries"""
+    si = io.StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['Implant ID', 'Surgery ID', 'Patient MRN', 'Patient Name', 'Surgery Date', 'Procedure', 'Implant Type', 'Manufacturer', 'Reference #', 'Size', 'Lot Number', 'Notes'])
+
+    for imp in Implant.query.order_by(Implant.created_at.desc()).all():
+        s = imp.surgery
+        cw.writerow([
+            imp.id,
+            s.id if s else '',
+            s.patient.mrn if s and s.patient else '',
+            s.patient.full_name if s and s.patient else '',
+            s.surgery_date.isoformat() if s and s.surgery_date else '',
+            s.procedure_type.name if s and s.procedure_type else '',
+            imp.implant_type.name if imp.implant_type else '',
+            imp.manufacturer.name if imp.manufacturer else '',
+            imp.reference_number or '',
+            imp.size or '',
+            imp.lot_number or '',
+            (imp.notes or '').replace('\n', ' ').strip()
+        ])
+
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=um_registry_implants.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
 
 
 # ---------- Health Check (for hosting platforms) ----------
