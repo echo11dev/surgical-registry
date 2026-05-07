@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Reports • University of Miami Hip & Knee Registry{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1"><i class="bi bi-file-earmark-text me-2"></i>Reports & Data Exports</h1>
+            <p class="text-muted mb-0">Export registry data in CSV format for analysis, research, or backup.</p>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card stats-card h-100 border-0">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted mb-1">Total Patients</h6>
+                        <h2 class="mb-0 fw-bold">{{ stats.patients }}</h2>
+                    </div>
+                    <div class="ms-3">
+                        <i class="bi bi-people-fill text-primary" style="font-size: 2.5rem; opacity: 0.2;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stats-card h-100 border-0">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted mb-1">Total Surgeries</h6>
+                        <h2 class="mb-0 fw-bold">{{ stats.surgeries }}</h2>
+                    </div>
+                    <div class="ms-3">
+                        <i class="bi bi-activity text-success" style="font-size: 2.5rem; opacity: 0.2;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stats-card h-100 border-0">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted mb-1">Total Implants</h6>
+                        <h2 class="mb-0 fw-bold">{{ stats.implants }}</h2>
+                    </div>
+                    <div class="ms-3">
+                        <i class="bi bi-box-seam text-warning" style="font-size: 2.5rem; opacity: 0.2;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options -->
+    <div class="row g-4">
+        <!-- Patients Export -->
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 pb-2">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-people text-primary fs-4 me-3"></i>
+                        <div>
+                            <h5 class="mb-0">Patients</h5>
+                            <small class="text-muted">Demographics & registration data</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Includes: MRN, Name, DOB, Sex, BMI, Race, Ethnicity, Contact info</p>
+                    <a href="{{ url_for('export_patients_csv') }}" class="btn btn-success w-100">
+                        <i class="bi bi-download me-2"></i>Download Patients CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Surgeries Export -->
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 pb-2">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-activity text-success fs-4 me-3"></i>
+                        <div>
+                            <h5 class="mb-0">Surgeries</h5>
+                            <small class="text-muted">Procedure & clinical details</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Includes: Date, Patient, Procedure (algorithm name), Side, Joint, Type, Surgeon, Hospital, Notes</p>
+                    <a href="{{ url_for('export_surgeries_csv') }}" class="btn btn-success w-100">
+                        <i class="bi bi-download me-2"></i>Download Surgeries CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Implants Export -->
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 pb-2">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-box-seam text-warning fs-4 me-3"></i>
+                        <div>
+                            <h5 class="mb-0">Implants</h5>
+                            <small class="text-muted">Device & lot tracking</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Includes: Surgery, Patient, Implant Type, Manufacturer, Reference #, Size, Lot #, Notes</p>
+                    <a href="{{ url_for('export_implants_csv') }}" class="btn btn-success w-100">
+                        <i class="bi bi-download me-2"></i>Download Implants CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info mt-5 small">
+        <i class="bi bi-info-circle me-2"></i>
+        <strong>Note:</strong> All exports use the standardized procedure names from the registry algorithm (e.g. "Right Total Hip Arthroplasty", "Left Unicompartmental Knee Arthroplasty"). Data is de-identified where appropriate for research use.
+    </div>
+</div>
+{% endblock %}
