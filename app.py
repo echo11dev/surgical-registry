@@ -262,7 +262,8 @@ def seed_initial_data():
         'Hip Femoral Head',
         'Knee Femoral Component',
         'Knee Tibia Component',
-        'Knee Tibia Liner'
+        'Knee Tibia Liner',
+        'Knee Patellar Component'
     ]
     for it in implant_types:
         db.session.add(ImplantType(name=it))
