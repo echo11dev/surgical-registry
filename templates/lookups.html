@@ -11,9 +11,7 @@
 <!-- Tabs for each lookup -->
 <ul class="nav nav-tabs mb-3" id="lookupTabs" role="tablist">
     <!-- Genders removed (now hardcoded Male/Female in patient forms) -->
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="procedures-tab" data-bs-toggle="tab" data-bs-target="#procedures" type="button" role="tab">Procedures ({{ lookups.procedure_types|length }})</button>
-    </li>
+    <!-- Procedures removed from Table Management (now auto-calculated in surgery forms) -->
     <!-- Implant Types and Manufacturers removed from lookup management (managed in Implant Master page) -->
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="hospitals-tab" data-bs-toggle="tab" data-bs-target="#hospitals" type="button" role="tab">Hospitals ({{ lookups.hospitals|length }})</button>
@@ -28,33 +26,6 @@
 
 <div class="tab-content" id="lookupTabsContent">
     <!-- Genders removed (hardcoded in patient forms) -->
-
-    <!-- Procedure Types -->
-    <div class="tab-pane fade" id="procedures" role="tabpanel">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Procedure Types</span>
-                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal" data-table="procedure_types" data-title="Add Procedure Type">+ Add</button>
-            </div>
-            <div class="card-body p-0">
-                <table class="table table-sm mb-0">
-                    <thead><tr><th>Name</th><th class="text-end">Actions</th></tr></thead>
-                    <tbody>
-                        {% for item in lookups.procedure_types %}
-                        <tr>
-                            <td>{{ item.name }}</td>
-                            <td class="text-end">
-                                <form action="{{ url_for('delete_lookup', table='procedure_types', entry_id=item.id) }}" method="POST" class="d-inline">
-                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="if(confirm('Delete this procedure type?')) this.form.submit();">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 
     <!-- Implant Types -->
     <div class="tab-pane fade" id="implants" role="tabpanel">

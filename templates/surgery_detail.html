@@ -94,7 +94,7 @@
                 <tr>
                     <th>Type</th>
                     <th>Manufacturer / Model</th>
-                    <th>Serial #</th>
+                    <th>Reference #</th>
                     <th>Size / Lot</th>
                     <th>Notes</th>
                     <th class="text-end">Actions</th>
@@ -709,6 +709,47 @@ function toggleRevisionReasonEdit(select) {
         group.style.display = (select.value === 'Revision') ? 'block' : 'none';
     }
 }
+
+function togglePrimaryTypeEdit(surgeryId, select) {
+    const group = document.getElementById('primary_type_edit_group_' + surgeryId);
+    if (!group) return;
+    const primarySel = group.querySelector('select[name="primary_type"]');
+    if (select.value === 'Primary') {
+        group.style.display = 'block';
+    } else {
+        group.style.display = 'none';
+        if (primarySel) primarySel.value = '';
+    }
+    updateCalculatedProcedureEdit(surgeryId, select);
+}
+
+function updateCalculatedProcedureEdit(surgeryId, el) {
+    const form = el ? el.closest('form') : null;
+    if (!form) return;
+    const display = document.getElementById('calc_procedure_type_edit_' + surgeryId);
+    if (!display) return;
+
+    const side = form.querySelector('select[name="side"]')?.value || '';
+    const joint = form.querySelector('select[name="joint"]')?.value || '';
+    const surgeryType = form.querySelector('select[name="surgery_type"]')?.value || '';
+    const primaryGroup = document.getElementById('primary_type_edit_group_' + surgeryId);
+    const primarySel = primaryGroup ? primaryGroup.querySelector('select[name="primary_type"]') : null;
+    const isPrimaryVisible = primaryGroup && primaryGroup.style.display !== 'none';
+    const primaryType = (primarySel && isPrimaryVisible) ? primarySel.value : '';
+
+    let procName = display.textContent || '—';
+    if (side && joint && surgeryType) {
+        if (surgeryType === 'Primary' && primaryType) {
+            if (joint === 'Hip' && primaryType === 'Total') procName = `${side} Total Hip Arthroplasty`;
+            else if (joint === 'Knee' && primaryType === 'Total') procName = `${side} Total Knee Arthroplasty`;
+            else if (joint === 'Hip' && primaryType === 'Partial') procName = `${side} Hip Hemiarthroplasty`;
+            else if (joint === 'Knee' && primaryType === 'Partial') procName = `${side} Unicompartmental Knee Arthroplasty`;
+        } else if (surgeryType === 'Revision') {
+            procName = `${side} Revision ${joint} Arthroplasty`;
+        }
+    }
+    display.textContent = procName;
+}
 </script>
 
 <!-- Edit Surgery Modal -->
@@ -726,38 +767,44 @@ function toggleRevisionReasonEdit(select) {
                             <label class="form-label">Surgery Date</label>
                             <input type="date" name="surgery_date" class="form-control" value="{{ surgery.surgery_date.isoformat() }}" required>
                         </div>
+                        <!-- Calculated Procedure Type -->
                         <div class="col-md-6">
                             <label class="form-label">Procedure Type</label>
-                            <select name="procedure_type_id" class="form-select" required>
-                                {% for pt in lookups.procedure_types %}
-                                <option value="{{ pt.id }}" {% if surgery.procedure_type_id == pt.id %}selected{% endif %}>{{ pt.name }}</option>
-                                {% endfor %}
-                            </select>
+                            <div id="calc_procedure_type_edit_{{ surgery.id }}" class="form-control-plaintext border rounded px-2 py-1 bg-light text-muted">{{ surgery.procedure_type.name if surgery.procedure_type else '—' }}</div>
                         </div>
                         
-                        <!-- New Orthopedic Fields -->
-                        <div class="col-md-3">
-                            <label class="form-label">Joint</label>
-                            <select name="joint" class="form-select">
-                                <option value="">—</option>
-                                <option value="Hip" {% if surgery.joint == 'Hip' %}selected{% endif %}>Hip</option>
-                                <option value="Knee" {% if surgery.joint == 'Knee' %}selected{% endif %}>Knee</option>
-                            </select>
-                        </div>
+                        <!-- Ortho fields: Side before Joint (swapped) -->
                         <div class="col-md-3">
                             <label class="form-label">Side</label>
-                            <select name="side" class="form-select">
+                            <select name="side" class="form-select" onchange="updateCalculatedProcedureEdit({{ surgery.id }}, this)">
                                 <option value="">—</option>
                                 <option value="Left" {% if surgery.side == 'Left' %}selected{% endif %}>Left</option>
                                 <option value="Right" {% if surgery.side == 'Right' %}selected{% endif %}>Right</option>
                             </select>
                         </div>
                         <div class="col-md-3">
+                            <label class="form-label">Joint</label>
+                            <select name="joint" class="form-select" onchange="updateCalculatedProcedureEdit({{ surgery.id }}, this)">
+                                <option value="">—</option>
+                                <option value="Hip" {% if surgery.joint == 'Hip' %}selected{% endif %}>Hip</option>
+                                <option value="Knee" {% if surgery.joint == 'Knee' %}selected{% endif %}>Knee</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
                             <label class="form-label">Surgery Type</label>
-                            <select name="surgery_type" class="form-select" onchange="toggleRevisionReasonEdit(this)">
+                            <select name="surgery_type" class="form-select" onchange="toggleRevisionReasonEdit(this); togglePrimaryTypeEdit({{ surgery.id }}, this); updateCalculatedProcedureEdit({{ surgery.id }}, this)">
                                 <option value="">—</option>
                                 <option value="Primary" {% if surgery.surgery_type == 'Primary' %}selected{% endif %}>Primary</option>
                                 <option value="Revision" {% if surgery.surgery_type == 'Revision' %}selected{% endif %}>Revision</option>
+                            </select>
+                        </div>
+                        <!-- Primary Type for Primary surgeries -->
+                        <div class="col-md-3" id="primary_type_edit_group_{{ surgery.id }}" style="display: {% if surgery.surgery_type == 'Primary' %}block{% else %}none{% endif %};">
+                            <label class="form-label">Primary Type</label>
+                            <select name="primary_type" class="form-select" onchange="updateCalculatedProcedureEdit({{ surgery.id }}, this)">
+                                <option value="">—</option>
+                                <option value="Total">Total</option>
+                                <option value="Partial">Partial</option>
                             </select>
                         </div>
                         <div class="col-md-3" id="revision_reason_edit_group" style="display: {% if surgery.surgery_type == 'Revision' %}block{% else %}none{% endif %};">
@@ -788,14 +835,6 @@ function toggleRevisionReasonEdit(select) {
                                 <option value="{{ h.id }}" {% if surgery.hospital_id == h.id %}selected{% endif %}>{{ h.name }}</option>
                                 {% endfor %}
                             </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Operating Room</label>
-                            <input type="text" name="operating_room" class="form-control" value="{{ surgery.operating_room or '' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Duration (min)</label>
-                            <input type="number" name="duration_minutes" class="form-control" value="{{ surgery.duration_minutes or '' }}">
                         </div>
                         <div class="col-12">
                             <label class="form-label">Notes</label>

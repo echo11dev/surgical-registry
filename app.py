@@ -197,6 +197,37 @@ class ImplantCatalog(db.Model):
 
 # ==================== HELPER FUNCTIONS ====================
 
+def get_or_create_procedure_type(side, joint, surgery_type, primary_type=None):
+    """Calculate procedure name from ortho fields (per user algorithm) and get/create ProcedureType entry.
+    This allows Procedure Type to be auto-calculated without manual dropdown in forms.
+    """
+    if not side or not joint or not surgery_type:
+        return None
+    name = None
+    if surgery_type == 'Primary' and primary_type:
+        if joint == 'Hip':
+            if primary_type == 'Total':
+                name = f"{side} Total Hip Arthroplasty"
+            elif primary_type == 'Partial':
+                name = f"{side} Hip Hemiarthroplasty"
+        elif joint == 'Knee':
+            if primary_type == 'Total':
+                name = f"{side} Total Knee Arthroplasty"
+            elif primary_type == 'Partial':
+                name = f"{side} Unicompartmental Knee Arthroplasty"
+    else:
+        # Revision or fallback
+        name = f"{side} {surgery_type} {joint} Arthroplasty"
+    if not name:
+        return None
+    pt = ProcedureType.query.filter_by(name=name).first()
+    if not pt:
+        pt = ProcedureType(name=name)
+        db.session.add(pt)
+        db.session.flush()  # get id without full commit yet
+    return pt
+
+
 def seed_initial_data():
     """Seed lookup tables and sample data if database is empty"""
     if Gender.query.first() is not None:
@@ -688,28 +719,42 @@ def add_surgery():
     try:
         patient_id = request.form.get('patient_id', type=int)
         surgery_date_str = request.form.get('surgery_date')
-        procedure_type_id = request.form.get('procedure_type_id', type=int)
         surgeon_id = request.form.get('surgeon_id', type=int)
         hospital_id = request.form.get('hospital_id', type=int)
-        operating_room = request.form.get('operating_room', '').strip() or None
-        duration = request.form.get('duration_minutes', type=int)
         notes = request.form.get('notes', '').strip() or None
 
-        if not all([patient_id, surgery_date_str, procedure_type_id]):
-            flash('Patient, Date, and Procedure Type are required.', 'danger')
+        # New ortho fields (Procedure Type is now calculated)
+        joint = request.form.get('joint')
+        side = request.form.get('side')
+        surgery_type = request.form.get('surgery_type')
+        revision_reason = request.form.get('revision_reason', '').strip() or None
+        primary_type = request.form.get('primary_type')
+
+        if not all([patient_id, surgery_date_str, side, joint, surgery_type]):
+            flash('Patient, Date, Side, Joint and Surgery Type are required.', 'danger')
             return redirect(request.referrer or url_for('patients_list'))
 
         surgery_date = datetime.strptime(surgery_date_str, '%Y-%m-%d').date()
 
+        # Calculate Procedure Type (and create if new name)
+        proc = get_or_create_procedure_type(side, joint, surgery_type, primary_type)
+        if not proc:
+            flash('Could not calculate Procedure Type. Ensure all fields (including Primary Type for Primary surgeries) are selected.', 'danger')
+            return redirect(request.referrer or url_for('patients_list'))
+
         surgery = Surgery(
             patient_id=patient_id,
             surgery_date=surgery_date,
-            procedure_type_id=procedure_type_id,
+            procedure_type_id=proc.id,
             surgeon_id=surgeon_id,
             hospital_id=hospital_id,
-            operating_room=operating_room,
-            duration_minutes=duration,
-            notes=notes
+            notes=notes,
+            # New fields
+            joint=joint,
+            side=side,
+            surgery_type=surgery_type,
+            revision_reason=revision_reason
+            # operating_room and duration_minutes deprecated/removed from form
         )
         db.session.add(surgery)
         db.session.commit()
@@ -748,12 +793,24 @@ def edit_surgery(surgery_id):
         surgery_date_str = request.form.get('surgery_date')
         if surgery_date_str:
             surgery.surgery_date = datetime.strptime(surgery_date_str, '%Y-%m-%d').date()
-        surgery.procedure_type_id = request.form.get('procedure_type_id', type=int) or surgery.procedure_type_id
         surgery.surgeon_id = request.form.get('surgeon_id', type=int) or surgery.surgeon_id
         surgery.hospital_id = request.form.get('hospital_id', type=int) or surgery.hospital_id
-        surgery.operating_room = request.form.get('operating_room', '').strip() or None
-        surgery.duration_minutes = request.form.get('duration_minutes', type=int)
         surgery.notes = request.form.get('notes', '').strip() or None
+
+        # Update ortho fields and recalculate procedure type
+        joint = request.form.get('joint') or surgery.joint
+        side = request.form.get('side') or surgery.side
+        surgery_type = request.form.get('surgery_type') or surgery.surgery_type
+        revision_reason = request.form.get('revision_reason', '').strip() or surgery.revision_reason
+        primary_type = request.form.get('primary_type')
+
+        proc = get_or_create_procedure_type(side, joint, surgery_type, primary_type)
+        if proc:
+            surgery.procedure_type_id = proc.id
+        surgery.joint = joint
+        surgery.side = side
+        surgery.surgery_type = surgery_type
+        surgery.revision_reason = revision_reason
         
         db.session.commit()
         flash('Surgery updated successfully!', 'success')

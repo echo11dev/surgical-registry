@@ -139,39 +139,45 @@
                             <label class="form-label">Surgery Date <span class="text-danger">*</span></label>
                             <input type="date" name="surgery_date" class="form-control" value="{{ '2026-05-03' }}" required>
                         </div>
+                        <!-- Calculated Procedure Type (no dropdown, auto from Side + Joint + Surgery Type + Primary Type) -->
                         <div class="col-md-6">
-                            <label class="form-label">Procedure Type <span class="text-danger">*</span></label>
-                            <select name="procedure_type_id" class="form-select" required>
-                                <option value="">Select procedure...</option>
-                                {% for pt in lookups.procedure_types %}
-                                <option value="{{ pt.id }}">{{ pt.name }}</option>
-                                {% endfor %}
-                            </select>
+                            <label class="form-label">Procedure Type</label>
+                            <div id="calc_procedure_type" class="form-control-plaintext border rounded px-2 py-1 bg-light text-muted">Select Side, Joint, Surgery Type &amp; Primary Type (if Primary) to calculate</div>
                         </div>
-                        
-                        <!-- New Orthopedic Fields -->
-                        <div class="col-md-3">
-                            <label class="form-label">Joint <span class="text-danger">*</span></label>
-                            <select name="joint" class="form-select" required>
-                                <option value="">Select...</option>
-                                <option value="Hip">Hip</option>
-                                <option value="Knee">Knee</option>
-                            </select>
-                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <!-- Switched: Side before Joint -->
                         <div class="col-md-3">
                             <label class="form-label">Side <span class="text-danger">*</span></label>
-                            <select name="side" class="form-select" required>
+                            <select name="side" class="form-select" required onchange="updateCalculatedProcedure(this.closest('form'))">
                                 <option value="">Select...</option>
                                 <option value="Left">Left</option>
                                 <option value="Right">Right</option>
                             </select>
                         </div>
                         <div class="col-md-3">
+                            <label class="form-label">Joint <span class="text-danger">*</span></label>
+                            <select name="joint" class="form-select" required onchange="updateCalculatedProcedure(this.closest('form'))">
+                                <option value="">Select...</option>
+                                <option value="Hip">Hip</option>
+                                <option value="Knee">Knee</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
                             <label class="form-label">Surgery Type <span class="text-danger">*</span></label>
-                            <select name="surgery_type" class="form-select" required onchange="toggleRevisionReason(this)">
+                            <select name="surgery_type" class="form-select" required onchange="toggleRevisionReason(this); togglePrimaryType(this); updateCalculatedProcedure(this.closest('form'))">
                                 <option value="">Select...</option>
                                 <option value="Primary">Primary</option>
                                 <option value="Revision">Revision</option>
+                            </select>
+                        </div>
+                        <!-- Primary Type shown only for Primary -->
+                        <div class="col-md-3" id="primary_type_group" style="display: none;">
+                            <label class="form-label">Primary Type <span class="text-danger">*</span></label>
+                            <select name="primary_type" class="form-select" onchange="updateCalculatedProcedure(this.closest('form'))">
+                                <option value="">Select...</option>
+                                <option value="Total">Total</option>
+                                <option value="Partial">Partial</option>
                             </select>
                         </div>
                         <div class="col-md-3" id="revision_reason_group" style="display: none;">
@@ -203,15 +209,7 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Operating Room</label>
-                            <input type="text" name="operating_room" class="form-control" placeholder="OR-3">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Duration (minutes)</label>
-                            <input type="number" name="duration_minutes" class="form-control" placeholder="120">
-                        </div>
-                        <div class="col-md-4">
+                        <div class="col-md-12">
                             <label class="form-label">Notes</label>
                             <input type="text" name="notes" class="form-control" placeholder="Key observations...">
                         </div>
@@ -347,11 +345,84 @@
 
 <script>
 function toggleRevisionReason(select) {
-    const group = document.getElementById('revision_reason_group');
+    // Support both add form and edit modals
+    const form = select.closest('form');
+    let group = form ? form.querySelector('#revision_reason_group, #revision_reason_edit_group') : document.getElementById('revision_reason_group');
     if (group) {
         group.style.display = (select.value === 'Revision') ? 'block' : 'none';
     }
 }
+
+function togglePrimaryType(select) {
+    const form = select.closest('form');
+    if (!form) return;
+    const group = form.querySelector('#primary_type_group');
+    if (!group) return;
+    const primarySel = group.querySelector('select[name="primary_type"]');
+    if (select.value === 'Primary') {
+        group.style.display = '';
+        if (primarySel) primarySel.required = true;
+    } else {
+        group.style.display = 'none';
+        if (primarySel) {
+            primarySel.required = false;
+            primarySel.value = '';
+        }
+    }
+    updateCalculatedProcedure(form);
+}
+
+function updateCalculatedProcedure(form) {
+    if (!form) return;
+    const display = form.querySelector('#calc_procedure_type');
+    if (!display) return;
+
+    const sideSel = form.querySelector('select[name="side"]');
+    const jointSel = form.querySelector('select[name="joint"]');
+    const surgerySel = form.querySelector('select[name="surgery_type"]');
+    const primaryGroup = form.querySelector('#primary_type_group');
+    const primarySel = primaryGroup ? primaryGroup.querySelector('select[name="primary_type"]') : null;
+
+    const side = sideSel ? sideSel.value : '';
+    const joint = jointSel ? jointSel.value : '';
+    const surgeryType = surgerySel ? surgerySel.value : '';
+    const isPrimaryVisible = primaryGroup && primaryGroup.style.display !== 'none';
+    const primaryType = (primarySel && isPrimaryVisible) ? primarySel.value : '';
+
+    let procName = 'Select Side, Joint, Surgery Type';
+    if (side && joint && surgeryType) {
+        if (surgeryType === 'Primary') {
+            if (primaryType === 'Total') {
+                if (joint === 'Hip') procName = `${side} Total Hip Arthroplasty`;
+                else if (joint === 'Knee') procName = `${side} Total Knee Arthroplasty`;
+            } else if (primaryType === 'Partial') {
+                if (joint === 'Hip') procName = `${side} Hip Hemiarthroplasty`;
+                else if (joint === 'Knee') procName = `${side} Unicompartmental Knee Arthroplasty`;
+            } else {
+                procName = 'Select Primary Type (Total or Partial)';
+            }
+        } else if (surgeryType === 'Revision') {
+            procName = `${side} Revision ${joint} Arthroplasty`;
+        }
+    }
+    display.textContent = procName;
+    display.style.color = (procName.includes('Select') || procName.includes('Revision')) ? '#6c757d' : '#005030';
+}
+
+// Attach listeners for dynamic calc on add form (edit forms have inline or separate)
+document.addEventListener('DOMContentLoaded', function() {
+    const addForm = document.querySelector('form[action*="add_surgery"]');
+    if (addForm) {
+        ['side', 'joint', 'surgery_type', 'primary_type'].forEach(name => {
+            const sel = addForm.querySelector(`select[name="${name}"]`);
+            if (sel) {
+                sel.addEventListener('change', () => updateCalculatedProcedure(addForm));
+            }
+        });
+        // initial if any prefilled (none)
+        updateCalculatedProcedure(addForm);
+    }
+});
 </script>
 
 {% endblock %}
