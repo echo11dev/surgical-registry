@@ -86,6 +86,15 @@
     </button>
 </div>
 
+{% if missing_implants %}
+<div class="alert alert-warning py-2 mb-3">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <strong>Missing mandatory implants for this Primary {{ surgery.joint }}:</strong>
+    {{ missing_implants | join(', ') }}
+    <span class="ms-2">— Please add them before completing the surgery record.</span>
+</div>
+{% endif %}
+
 {% if implants %}
 <div class="card">
     <div class="table-responsive">

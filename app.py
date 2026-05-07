@@ -230,6 +230,33 @@ def get_or_create_procedure_type(side, joint, surgery_type, primary_type=None):
     return pt
 
 
+def get_missing_mandatory_implants(surgery):
+    """Return list of missing mandatory implant types for Primary Hip/Knee surgeries."""
+    if not surgery or surgery.surgery_type != 'Primary' or surgery.joint not in ('Hip', 'Knee'):
+        return []
+
+    if surgery.joint == 'Knee':
+        mandatory_names = [
+            'Knee Femoral Component',
+            'Knee Tibia Component',
+            'Knee Tibia Liner'
+        ]
+    else:  # Hip
+        mandatory_names = [
+            'Hip Acetabular Shell',
+            'Hip Acetabular Liner',
+            'Hip Femoral Stem',
+            'Hip Femoral Head'
+        ]
+
+    existing_names = {
+        imp.implant_type.name 
+        for imp in surgery.implants 
+        if imp.implant_type and imp.implant_type.name
+    }
+    return [name for name in mandatory_names if name not in existing_names]
+
+
 def seed_initial_data():
     """Seed lookup tables and sample data if database is empty"""
     if Gender.query.first() is not None:
@@ -792,12 +819,15 @@ def surgery_detail(surgery_id):
     
     research_projects = ResearchProject.query.order_by(ResearchProject.name).all()
     
+    missing_implants = get_missing_mandatory_implants(surgery)
+
     return render_template('surgery_detail.html', 
                           surgery=surgery, 
                           patient=patient,
                           implants=implants,
                           lookups=lookups,
-                          research_projects=research_projects)
+                          research_projects=research_projects,
+                          missing_implants=missing_implants)
 
 @app.route('/surgeries/<int:surgery_id>/edit', methods=['POST'])
 def edit_surgery(surgery_id):
@@ -890,7 +920,14 @@ def add_implant():
         )
         db.session.add(implant)
         db.session.commit()
-        flash('Implant added successfully!', 'success')
+
+        # Check if this completed the mandatory set for Primary Hip/Knee
+        surgery = Surgery.query.get(surgery_id)
+        still_missing = get_missing_mandatory_implants(surgery)
+        if surgery and surgery.surgery_type == 'Primary' and not still_missing:
+            flash('All mandatory implants have been added for this Primary {} surgery!'.format(surgery.joint), 'success')
+        else:
+            flash('Implant added successfully!', 'success')
     except IntegrityError:
         db.session.rollback()
         flash('A implant with that serial number already exists.', 'danger')
