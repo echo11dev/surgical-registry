@@ -90,283 +90,111 @@
     {% endif %}
 </div>
 
-<!-- Structured Component Entry - Enter Reference # to Autofill -->
+<!-- Structured Component Entry for Primary Hip/Knee -->
 {% if surgery.joint and (surgery.joint|lower == 'hip' or surgery.joint|lower == 'knee') %}
 <div class="card mb-4 border-success">
     <div class="card-header bg-success text-white py-2">
-        <h6 class="mb-0"><i class="bi bi-magic me-2"></i>Add Required Components — Enter Reference # to Autofill</h6>
+        <h6 class="mb-0"><i class="bi bi-magic me-2"></i>Required Components — Search Implant Master by Reference #</h6>
     </div>
     <div class="card-body p-3">
+        <p class="small text-muted mb-3">Click the button for each required component. The modal will open pre-selected with autocomplete search against the Implant Master. All details (Manufacturer, Size, Model...) will auto-fill. Enter Lot # manually in the modal before saving.</p>
 
-        {% if surgery.joint and surgery.joint|lower == 'knee' %}
-        <!-- === PRIMARY KNEE === -->
-        <!-- Femoral Component -->
-        <div class="border rounded p-3 mb-3 bg-light">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <strong>1. Femoral Component</strong><br>
-                    <span class="badge bg-danger">Required</span>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small mb-1">Reference #</label>
-                    <input type="text" class="form-control form-control-sm" id="cat_knee_femoral" placeholder="e.g. ZIM-PER-F5">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Manufacturer</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="mfr_knee_femoral" readonly>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Size</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="size_knee_femoral" readonly>
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-sm btn-success w-100" 
-                            onclick="lookupComponent('knee_femoral', 'Knee Femoral Component')">
-                        Lookup &amp; Add
+        {% if surgery.joint|lower == 'knee' %}
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100 d-flex flex-column">
+                    <div class="mb-2">
+                        <strong>1. Femoral Component</strong> <span class="badge bg-danger">Required</span>
+                    </div>
+                    <button type="button" class="btn btn-primary mt-auto" 
+                            onclick="openAddImplantForComponent('Knee Femoral Component')">
+                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
                     </button>
                 </div>
             </div>
-            <div class="row mt-1">
-                <div class="col-12">
-                    <small id="status_knee_femoral" class="text-muted"></small>
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100 d-flex flex-column">
+                    <div class="mb-2">
+                        <strong>2. Tibial Component</strong> <span class="badge bg-danger">Required</span>
+                    </div>
+                    <button type="button" class="btn btn-primary mt-auto" 
+                            onclick="openAddImplantForComponent('Knee Tibia Component')">
+                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100 d-flex flex-column">
+                    <div class="mb-2">
+                        <strong>3. Tibial Liner</strong> <span class="badge bg-danger">Required</span>
+                    </div>
+                    <button type="button" class="btn btn-primary mt-auto" 
+                            onclick="openAddImplantForComponent('Knee Tibia Liner')">
+                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100 d-flex flex-column bg-light">
+                    <div class="mb-2">
+                        <strong>4. Patellar Component</strong> <span class="badge bg-secondary">Optional</span>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary mt-auto" 
+                            onclick="openAddImplantForComponent('Knee Patellar Component')">
+                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Tibial Component -->
-        <div class="border rounded p-3 mb-3 bg-light">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <strong>2. Tibial Component</strong><br>
-                    <span class="badge bg-danger">Required</span>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small mb-1">Reference #</label>
-                    <input type="text" class="form-control form-control-sm" id="cat_knee_tibial" placeholder="e.g. ZIM-PER-T7">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Manufacturer</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="mfr_knee_tibial" readonly>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Size</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="size_knee_tibial" readonly>
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-sm btn-success w-100" 
-                            onclick="lookupComponent('knee_tibial', 'Knee Tibia Component')">
-                        Lookup &amp; Add
+        {% elif surgery.joint|lower == 'hip' %}
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100 d-flex flex-column">
+                    <div class="mb-2">
+                        <strong>1. Acetabular Shell</strong> <span class="badge bg-danger">Required</span>
+                    </div>
+                    <button type="button" class="btn btn-primary mt-auto" 
+                            onclick="openAddImplantForComponent('Hip Acetabular Shell')">
+                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
                     </button>
                 </div>
             </div>
-            <div class="row mt-1">
-                <div class="col-12">
-                    <small id="status_knee_tibial" class="text-muted"></small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tibial Liner -->
-        <div class="border rounded p-3 mb-3 bg-light">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <strong>3. Tibial Liner</strong><br>
-                    <span class="badge bg-danger">Required</span>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small mb-1">Reference #</label>
-                    <input type="text" class="form-control form-control-sm" id="cat_knee_liner" placeholder="e.g. ZIM-PS-10">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Manufacturer</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="mfr_knee_liner" readonly>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Size</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="size_knee_liner" readonly>
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-sm btn-success w-100" 
-                            onclick="lookupComponent('knee_liner', 'Knee Tibia Liner')">
-                        Lookup &amp; Add
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100 d-flex flex-column">
+                    <div class="mb-2">
+                        <strong>2. Acetabular Liner</strong> <span class="badge bg-danger">Required</span>
+                    </div>
+                    <button type="button" class="btn btn-primary mt-auto" 
+                            onclick="openAddImplantForComponent('Hip Acetabular Liner')">
+                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
                     </button>
                 </div>
             </div>
-            <div class="row mt-1">
-                <div class="col-12">
-                    <small id="status_knee_liner" class="text-muted"></small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Patellar (Optional) -->
-        <div class="border rounded p-3 bg-light">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <strong>4. Patellar Component</strong><br>
-                    <span class="badge bg-secondary">Optional</span>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small mb-1">Reference #</label>
-                    <input type="text" class="form-control form-control-sm" id="cat_knee_patellar" placeholder="e.g. ZIM-PAT-32">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Manufacturer</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="mfr_knee_patellar" readonly>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Size</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="size_knee_patellar" readonly>
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-sm btn-outline-secondary w-100" 
-                            onclick="lookupComponent('knee_patellar', 'Knee Patellar Component')">
-                        Lookup &amp; Add
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100 d-flex flex-column">
+                    <div class="mb-2">
+                        <strong>3. Femoral Stem</strong> <span class="badge bg-danger">Required</span>
+                    </div>
+                    <button type="button" class="btn btn-primary mt-auto" 
+                            onclick="openAddImplantForComponent('Hip Femoral Stem')">
+                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
                     </button>
                 </div>
             </div>
-            <div class="row mt-1">
-                <div class="col-12">
-                    <small id="status_knee_patellar" class="text-muted"></small>
-                </div>
-            </div>
-        </div>
-
-        {% elif surgery.joint and surgery.joint|lower == 'hip' %}
-        <!-- === PRIMARY HIP === -->
-        <!-- Acetabular Shell -->
-        <div class="border rounded p-3 mb-3 bg-light">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <strong>1. Acetabular Shell</strong><br>
-                    <span class="badge bg-danger">Required</span>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small mb-1">Reference #</label>
-                    <input type="text" class="form-control form-control-sm" id="cat_hip_shell" placeholder="e.g. STR-TRI-54">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Manufacturer</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="mfr_hip_shell" readonly>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Size</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="size_hip_shell" readonly>
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-sm btn-success w-100" 
-                            onclick="lookupComponent('hip_shell', 'Hip Acetabular Shell')">
-                        Lookup &amp; Add
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100 d-flex flex-column">
+                    <div class="mb-2">
+                        <strong>4. Femoral Head</strong> <span class="badge bg-danger">Required</span>
+                    </div>
+                    <button type="button" class="btn btn-primary mt-auto" 
+                            onclick="openAddImplantForComponent('Hip Femoral Head')">
+                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
                     </button>
-                </div>
-            </div>
-            <div class="row mt-1">
-                <div class="col-12">
-                    <small id="status_hip_shell" class="text-muted"></small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Acetabular Liner -->
-        <div class="border rounded p-3 mb-3 bg-light">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <strong>2. Acetabular Liner</strong><br>
-                    <span class="badge bg-danger">Required</span>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small mb-1">Reference #</label>
-                    <input type="text" class="form-control form-control-sm" id="cat_hip_liner" placeholder="e.g. STR-LIN-28">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Manufacturer</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="mfr_hip_liner" readonly>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Size</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="size_hip_liner" readonly>
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-sm btn-success w-100" 
-                            onclick="lookupComponent('hip_liner', 'Hip Acetabular Liner')">
-                        Lookup &amp; Add
-                    </button>
-                </div>
-            </div>
-            <div class="row mt-1">
-                <div class="col-12">
-                    <small id="status_hip_liner" class="text-muted"></small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Femoral Stem -->
-        <div class="border rounded p-3 mb-3 bg-light">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <strong>3. Femoral Stem</strong><br>
-                    <span class="badge bg-danger">Required</span>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small mb-1">Reference #</label>
-                    <input type="text" class="form-control form-control-sm" id="cat_hip_stem" placeholder="e.g. STR-ACC-5">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Manufacturer</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="mfr_hip_stem" readonly>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Size</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="size_hip_stem" readonly>
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-sm btn-success w-100" 
-                            onclick="lookupComponent('hip_stem', 'Hip Femoral Stem')">
-                        Lookup &amp; Add
-                    </button>
-                </div>
-            </div>
-            <div class="row mt-1">
-                <div class="col-12">
-                    <small id="status_hip_stem" class="text-muted"></small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Femoral Head -->
-        <div class="border rounded p-3 bg-light">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <strong>4. Femoral Head</strong><br>
-                    <span class="badge bg-danger">Required</span>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small mb-1">Reference #</label>
-                    <input type="text" class="form-control form-control-sm" id="cat_hip_head" placeholder="e.g. STR-LFIT-32">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Manufacturer</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="mfr_hip_head" readonly>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Size</label>
-                    <input type="text" class="form-control form-control-sm bg-white" id="size_hip_head" readonly>
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-sm btn-success w-100" 
-                            onclick="lookupComponent('hip_head', 'Hip Femoral Head')">
-                        Lookup &amp; Add
-                    </button>
-                </div>
-            </div>
-            <div class="row mt-1">
-                <div class="col-12">
-                    <small id="status_hip_head" class="text-muted"></small>
                 </div>
             </div>
         </div>
         {% endif %}
-
     </div>
 </div>
 {% endif %}
