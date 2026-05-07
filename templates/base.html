@@ -193,9 +193,9 @@
     
     <!-- Common JS -->
     <script>
-        // Auto-dismiss alerts after 5 seconds
+        // Auto-dismiss alerts after 5 seconds (except persistent ones)
         setTimeout(() => {
-            document.querySelectorAll('.alert').forEach(alert => {
+            document.querySelectorAll('.alert:not(.alert-persistent)').forEach(alert => {
                 const bsAlert = new bootstrap.Alert(alert);
                 bsAlert.close();
             });

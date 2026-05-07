@@ -24,7 +24,7 @@
                 <div class="text-muted">
                     <strong>Patient:</strong> <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="text-decoration-none">{{ patient.full_name }}</a> ({{ patient.mrn }})<br>
                     <strong>Surgeon:</strong> {{ surgery.surgeon.name if surgery.surgeon else '—' }}<br>
-                    <strong>Hospital:</strong> {{ surgery.hospital.name if surgery.hospital else '—' }} • {{ surgery.operating_room or '—' }}
+                    <strong>Hospital:</strong> {{ surgery.hospital.name if surgery.hospital else '—' }}
                     {% if surgery.duration_minutes %}<br><strong>Duration:</strong> {{ surgery.duration_minutes }} minutes{% endif %}
                 </div>
             </div>
@@ -87,7 +87,7 @@
 </div>
 
 {% if surgery.joint and (surgery.joint|lower == 'hip' or surgery.joint|lower == 'knee') %}
-<div class="alert {% if missing_implants %}alert-warning{% else %}alert-success{% endif %} py-2 mb-3">
+<div class="alert {% if missing_implants %}alert-warning{% else %}alert-success{% endif %} py-2 mb-3 alert-persistent">
     {% if missing_implants %}
         <i class="bi bi-exclamation-triangle me-2"></i>
         <strong>Missing mandatory implants for this Primary {{ surgery.joint }}:</strong>
