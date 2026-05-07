@@ -81,120 +81,65 @@
 <!-- Implants Section -->
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0"><i class="bi bi-cpu me-2"></i>Implants ({{ implants|length }})</h4>
-    {% if surgery.joint and (surgery.joint|lower == 'hip' or surgery.joint|lower == 'knee') %}
-        <span class="badge bg-success">{{ surgery.surgery_type or 'Surgery' }} {{ surgery.joint }} — Structured Entry</span>
-    {% else %}
-        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#addImplantModal">
-            <i class="bi bi-plus-circle me-2"></i>Add Implant
-        </button>
-    {% endif %}
+    <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#addImplantModal">
+        <i class="bi bi-plus-circle me-2"></i>Add Implant
+    </button>
 </div>
 
-<!-- Structured Component Entry for Primary Hip/Knee -->
-{% if surgery.joint and (surgery.joint|lower == 'hip' or surgery.joint|lower == 'knee') %}
-<div class="card mb-4 border-success">
-    <div class="card-header bg-success text-white py-2">
-        <h6 class="mb-0"><i class="bi bi-magic me-2"></i>Required Components — Search Implant Master by Reference #</h6>
+{% if implants %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 data-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Manufacturer / Model</th>
+                    <th>Reference #</th>
+                    <th>Size / Lot</th>
+                    <th>Notes</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for implant in implants %}
+                <tr class="implant-row">
+                    <td>
+                        <strong>{{ implant.implant_type.name if implant.implant_type else '—' }}</strong>
+                    </td>
+                    <td>
+                        {{ implant.manufacturer.name if implant.manufacturer else '—' }}<br>
+                        <small class="text-muted">{{ implant.model or '—' }}</small>
+                    </td>
+                    <td><code>{{ implant.reference_number or '—' }}</code></td>
+                    <td>
+                        {{ implant.size or '—' }}<br>
+                        <small class="text-muted">Lot: {{ implant.lot_number or '—' }}</small>
+                    </td>
+                    <td><small>{{ implant.notes or '—' }}</small></td>
+                    <td class="text-end">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editImplantModal{{ implant.id }}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form id="deleteImplant{{ implant.id }}" action="{{ url_for('delete_implant', implant_id=implant.id) }}" method="POST" class="d-inline">
+                                <button type="button" class="btn btn-outline-danger" onclick="confirmDelete('deleteImplant{{ implant.id }}', 'implant')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-    <div class="card-body p-3">
-        <p class="small text-muted mb-3">Click the button for each required component. The modal will open pre-selected with autocomplete search against the Implant Master. All details (Manufacturer, Size, Model...) will auto-fill. Enter Lot # manually in the modal before saving.</p>
-
-        {% if surgery.joint|lower == 'knee' %}
-        <div class="row g-3">
-            <div class="col-md-6">
-                <div class="border rounded p-3 h-100 d-flex flex-column">
-                    <div class="mb-2">
-                        <strong>1. Femoral Component</strong> <span class="badge bg-danger">Required</span>
-                    </div>
-                    <button type="button" class="btn btn-primary mt-auto" 
-                            onclick="openAddImplantForComponent('Knee Femoral Component')">
-                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
-                    </button>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="border rounded p-3 h-100 d-flex flex-column">
-                    <div class="mb-2">
-                        <strong>2. Tibial Component</strong> <span class="badge bg-danger">Required</span>
-                    </div>
-                    <button type="button" class="btn btn-primary mt-auto" 
-                            onclick="openAddImplantForComponent('Knee Tibia Component')">
-                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
-                    </button>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="border rounded p-3 h-100 d-flex flex-column">
-                    <div class="mb-2">
-                        <strong>3. Tibial Liner</strong> <span class="badge bg-danger">Required</span>
-                    </div>
-                    <button type="button" class="btn btn-primary mt-auto" 
-                            onclick="openAddImplantForComponent('Knee Tibia Liner')">
-                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
-                    </button>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="border rounded p-3 h-100 d-flex flex-column bg-light">
-                    <div class="mb-2">
-                        <strong>4. Patellar Component</strong> <span class="badge bg-secondary">Optional</span>
-                    </div>
-                    <button type="button" class="btn btn-outline-primary mt-auto" 
-                            onclick="openAddImplantForComponent('Knee Patellar Component')">
-                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        {% elif surgery.joint|lower == 'hip' %}
-        <div class="row g-3">
-            <div class="col-md-6">
-                <div class="border rounded p-3 h-100 d-flex flex-column">
-                    <div class="mb-2">
-                        <strong>1. Acetabular Shell</strong> <span class="badge bg-danger">Required</span>
-                    </div>
-                    <button type="button" class="btn btn-primary mt-auto" 
-                            onclick="openAddImplantForComponent('Hip Acetabular Shell')">
-                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
-                    </button>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="border rounded p-3 h-100 d-flex flex-column">
-                    <div class="mb-2">
-                        <strong>2. Acetabular Liner</strong> <span class="badge bg-danger">Required</span>
-                    </div>
-                    <button type="button" class="btn btn-primary mt-auto" 
-                            onclick="openAddImplantForComponent('Hip Acetabular Liner')">
-                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
-                    </button>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="border rounded p-3 h-100 d-flex flex-column">
-                    <div class="mb-2">
-                        <strong>3. Femoral Stem</strong> <span class="badge bg-danger">Required</span>
-                    </div>
-                    <button type="button" class="btn btn-primary mt-auto" 
-                            onclick="openAddImplantForComponent('Hip Femoral Stem')">
-                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
-                    </button>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="border rounded p-3 h-100 d-flex flex-column">
-                    <div class="mb-2">
-                        <strong>4. Femoral Head</strong> <span class="badge bg-danger">Required</span>
-                    </div>
-                    <button type="button" class="btn btn-primary mt-auto" 
-                            onclick="openAddImplantForComponent('Hip Femoral Head')">
-                        <i class="bi bi-search me-2"></i>Search Master &amp; Add
-                    </button>
-                </div>
-            </div>
-        </div>
-        {% endif %}
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-cpu text-muted" style="font-size: 4rem;"></i>
+        <h5 class="mt-3">No implants recorded for this surgery</h5>
+        <p class="text-muted">Add implants using the button above.</p>
     </div>
 </div>
 {% endif %}

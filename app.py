@@ -866,6 +866,18 @@ def add_implant():
             flash('Surgery ID is required.', 'danger')
             return redirect(request.referrer or url_for('patients_list'))
 
+        surgery = Surgery.query.get(surgery_id)
+        if surgery and surgery.surgery_type == 'Primary' and surgery.joint in ('Hip', 'Knee'):
+            # Enforce one of each specific component for primary hip/knee
+            existing = Implant.query.filter_by(
+                surgery_id=surgery_id,
+                implant_type_id=implant_type_id
+            ).first()
+            if existing:
+                it_name = existing.implant_type.name if existing.implant_type else 'this component type'
+                flash(f'Only one {it_name} is allowed for a Primary {surgery.joint} surgery.', 'danger')
+                return redirect(url_for('surgery_detail', surgery_id=surgery_id))
+
         implant = Implant(
             surgery_id=surgery_id,
             implant_type_id=implant_type_id,
