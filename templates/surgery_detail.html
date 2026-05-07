@@ -81,10 +81,147 @@
 <!-- Implants Section -->
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0"><i class="bi bi-cpu me-2"></i>Implants ({{ implants|length }})</h4>
-    <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#addImplantModal">
-        <i class="bi bi-plus-circle me-2"></i>Add Implant
-    </button>
+    {% if surgery.surgery_type and surgery.surgery_type|lower == 'primary' %}
+        <span class="badge bg-success">Primary {{ surgery.joint or 'Joint' }} — Structured Entry</span>
+    {% else %}
+        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#addImplantModal">
+            <i class="bi bi-plus-circle me-2"></i>Add Implant
+        </button>
+    {% endif %}
 </div>
+
+<!-- Structured Component Entry for Primary Hip/Knee -->
+{% if surgery.surgery_type and surgery.surgery_type|lower == 'primary' %}
+<div class="card mb-4 border-primary">
+    <div class="card-header bg-primary text-white py-2">
+        <h6 class="mb-0"><i class="bi bi-list-check me-2"></i>Required Components for Primary {{ surgery.joint }}</h6>
+    </div>
+    <div class="card-body p-3">
+        {% if surgery.joint and surgery.joint|lower == 'knee' %}
+            <!-- Primary Knee Components -->
+            <div class="row g-3">
+                <!-- Femoral Component -->
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>1. Femoral Component</strong>
+                            <span class="badge bg-danger">Required</span>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100"
+                                onclick="openAddImplantForComponent('Knee Femoral Component')">
+                            <i class="bi bi-search me-1"></i> Search Catalog & Add
+                        </button>
+                        <small class="text-muted d-block mt-1">Search Implant Master by catalog number</small>
+                    </div>
+                </div>
+                <!-- Tibial Component -->
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>2. Tibial Component</strong>
+                            <span class="badge bg-danger">Required</span>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100"
+                                onclick="openAddImplantForComponent('Knee Tibia Component')">
+                            <i class="bi bi-search me-1"></i> Search Catalog & Add
+                        </button>
+                        <small class="text-muted d-block mt-1">Search Implant Master by catalog number</small>
+                    </div>
+                </div>
+                <!-- Tibial Liner -->
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>3. Tibial Liner</strong>
+                            <span class="badge bg-danger">Required</span>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100"
+                                onclick="openAddImplantForComponent('Knee Tibia Liner')">
+                            <i class="bi bi-search me-1"></i> Search Catalog & Add
+                        </button>
+                        <small class="text-muted d-block mt-1">Search Implant Master by catalog number</small>
+                    </div>
+                </div>
+                <!-- Patellar Component (Optional) -->
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100 bg-light">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>4. Patellar Component</strong>
+                            <span class="badge bg-secondary">Optional</span>
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+                                onclick="openAddImplantForComponent('Knee Patellar Component')">
+                            <i class="bi bi-search me-1"></i> Search Catalog & Add
+                        </button>
+                        <small class="text-muted d-block mt-1">Search Implant Master by catalog number</small>
+                    </div>
+                </div>
+            </div>
+
+        {% elif surgery.joint and surgery.joint|lower == 'hip' %}
+            <!-- Primary Hip Components -->
+            <div class="row g-3">
+                <!-- Acetabular Shell -->
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>1. Acetabular Shell</strong>
+                            <span class="badge bg-danger">Required</span>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100"
+                                onclick="openAddImplantForComponent('Hip Acetabular Shell')">
+                            <i class="bi bi-search me-1"></i> Search Catalog & Add
+                        </button>
+                        <small class="text-muted d-block mt-1">Search Implant Master by catalog number</small>
+                    </div>
+                </div>
+                <!-- Acetabular Liner -->
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>2. Acetabular Liner</strong>
+                            <span class="badge bg-danger">Required</span>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100"
+                                onclick="openAddImplantForComponent('Hip Acetabular Liner')">
+                            <i class="bi bi-search me-1"></i> Search Catalog & Add
+                        </button>
+                        <small class="text-muted d-block mt-1">Search Implant Master by catalog number</small>
+                    </div>
+                </div>
+                <!-- Femoral Stem -->
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>3. Femoral Stem</strong>
+                            <span class="badge bg-danger">Required</span>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100"
+                                onclick="openAddImplantForComponent('Hip Femoral Stem')">
+                            <i class="bi bi-search me-1"></i> Search Catalog & Add
+                        </button>
+                        <small class="text-muted d-block mt-1">Search Implant Master by catalog number</small>
+                    </div>
+                </div>
+                <!-- Femoral Head -->
+                <div class="col-md-6">
+                    <div class="border rounded p-3 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>4. Femoral Head</strong>
+                            <span class="badge bg-danger">Required</span>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100"
+                                onclick="openAddImplantForComponent('Hip Femoral Head')">
+                            <i class="bi bi-search me-1"></i> Search Catalog & Add
+                        </button>
+                        <small class="text-muted d-block mt-1">Search Implant Master by catalog number</small>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
 
 {% if implants %}
 <div class="card">
@@ -749,6 +886,66 @@ function updateCalculatedProcedureEdit(surgeryId, el) {
         }
     }
     display.textContent = procName;
+}
+
+// Open Add Implant modal pre-selected for a specific component type (used by structured Primary Hip/Knee entry)
+function openAddImplantForComponent(implantTypeName) {
+    const modalEl = document.getElementById('addImplantModal');
+    if (!modalEl) return;
+
+    const modal = new bootstrap.Modal(modalEl);
+    
+    // Open modal first
+    modal.show();
+
+    // After modal is shown, try to pre-select the correct implant type
+    modalEl.addEventListener('shown.bs.modal', function handler() {
+        modalEl.removeEventListener('shown.bs.modal', handler);
+        
+        const typeSelect = document.getElementById('implant_type_id') || 
+                          modalEl.querySelector('select[name="implant_type_id"]');
+        
+        if (typeSelect) {
+            // Find option by exact text match first
+            let found = false;
+            for (let i = 0; i < typeSelect.options.length; i++) {
+                if (typeSelect.options[i].text.trim() === implantTypeName) {
+                    typeSelect.selectedIndex = i;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                // Fallback 1: partial match on last word (e.g. "Femoral Component")
+                const lastWord = implantTypeName.split(' ').pop().toLowerCase();
+                for (let i = 0; i < typeSelect.options.length; i++) {
+                    if (typeSelect.options[i].text.toLowerCase().includes(lastWord)) {
+                        typeSelect.selectedIndex = i;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (!found) {
+                // Fallback 2: match on any word
+                const words = implantTypeName.toLowerCase().split(' ');
+                for (let i = 0; i < typeSelect.options.length; i++) {
+                    const optText = typeSelect.options[i].text.toLowerCase();
+                    if (words.some(w => optText.includes(w))) {
+                        typeSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Focus the search input
+        const searchInput = document.getElementById('implantSearch');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+        }
+    }, { once: true });
 }
 </script>
 
