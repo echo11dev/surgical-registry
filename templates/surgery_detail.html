@@ -501,27 +501,6 @@
                         {% endfor %}
                     </div>
 
-{# Duplicate old Key Outcome block removed #}
-                        <div class="col-md-6 mb-2">
-                            <div class="form-check form-switch mb-1">
-                                <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
-                                       data-date-target="date-{{ key }}"
-                                       {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
-                                <label class="form-check-label" for="comp-{{ key }}">
-                                    {{ label }}
-                                    <i class="bi bi-info-circle text-muted ms-1" 
-                                       data-bs-toggle="tooltip" 
-                                       data-bs-placement="top"
-                                       title="Description based on Hip Society and Knee Society standardized complication lists."></i>
-                                </label>
-                            </div>
-                            <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
-                                <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 160px;"
-                                       value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}">
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
                 </form>
             </div>
         </div>
