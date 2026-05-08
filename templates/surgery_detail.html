@@ -501,18 +501,7 @@
                         {% endfor %}
                     </div>
 
-                    <!-- Separate section for key outcome/admin events -->
-                    <hr class="my-3">
-                    <h6 class="mb-2 text-muted"><i class="bi bi-clipboard-check me-1"></i>Key Outcome Events</h6>
-                    <div class="row g-2">
-                        {% set outcome_events = [
-                            ('reoperation', 'Reoperation'),
-                            ('readmission', 'Readmission'),
-                            ('revision', 'Revision'),
-                            ('death', 'Death')
-                        ] %}
-                        
-                        {% for key, label in outcome_events %}
+{# Duplicate old Key Outcome block removed #}
                         <div class="col-md-6 mb-2">
                             <div class="form-check form-switch mb-1">
                                 <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
@@ -1256,6 +1245,5 @@ function openAddImplantForComponent(implantTypeName) {
         </div>
     </div>
 </div>
-{% endfor %}
 
 {% endblock %}
