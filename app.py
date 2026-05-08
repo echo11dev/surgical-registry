@@ -166,6 +166,7 @@ class ResearchProject(db.Model):
     name = db.Column(db.String(200), nullable=False, unique=True)
     sponsor = db.Column(db.String(200))
     description = db.Column(db.Text)
+    enrollment_goal = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
@@ -1114,6 +1115,7 @@ def add_research_project_from_lookups():
     name = request.form.get('name', '').strip()
     sponsor = request.form.get('sponsor', '').strip() or None
     description = request.form.get('description', '').strip() or None
+    enrollment_goal = request.form.get('enrollment_goal', type=int) or None
 
     if not name:
         flash('Project name is required.', 'danger')
@@ -1123,7 +1125,7 @@ def add_research_project_from_lookups():
         flash('A research project with this name already exists.', 'danger')
         return redirect(url_for('lookups'))
 
-    project = ResearchProject(name=name, sponsor=sponsor, description=description)
+    project = ResearchProject(name=name, sponsor=sponsor, description=description, enrollment_goal=enrollment_goal)
     db.session.add(project)
     db.session.commit()
     flash(f'Research project "{name}" created successfully.', 'success')
@@ -1465,7 +1467,11 @@ def save_complications(surgery_id):
         
         for key in complication_keys:
             value = request.form.get(key, 'no')
-            complications[key] = value
+            date_val = request.form.get(f"{key}_date") or None
+            if value == 'yes':
+                complications[key] = {'value': 'yes', 'date': date_val}
+            else:
+                complications[key] = {'value': 'no', 'date': None}
         
         surgery.complications = complications
         db.session.commit()

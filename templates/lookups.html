@@ -217,6 +217,7 @@
                             <tr>
                                 <th>Project Name</th>
                                 <th>Description</th>
+                                <th>Enrollment Goal</th>
                                 <th class="text-end">Actions</th>
                             </tr>
                         </thead>
@@ -225,6 +226,7 @@
                             <tr>
                                 <td><strong>{{ project.name }}</strong></td>
                                 <td><small class="text-muted">{{ project.description or '—' }}</small></td>
+                                <td>{{ project.enrollment_goal or '—' }}</td>
                                 <td class="text-end">
                                     <form action="{{ url_for('delete_research_project_from_lookups', project_id=project.id) }}" method="POST" class="d-inline">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" 
@@ -269,6 +271,10 @@
                     <div id="descriptionField" class="mb-3 d-none">
                         <label class="form-label">Description</label>
                         <textarea name="description" class="form-control" rows="3" placeholder="Brief description of the research project"></textarea>
+                    </div>
+                    <div id="enrollmentGoalField" class="mb-3 d-none">
+                        <label class="form-label">Enrollment Goal</label>
+                        <input type="number" name="enrollment_goal" class="form-control" placeholder="e.g. 500" min="0">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -340,6 +346,14 @@
             descriptionField.classList.remove('d-none');
         } else {
             descriptionField.classList.add('d-none');
+        }
+
+        // Show enrollment goal field only for research_projects
+        const enrollmentGoalField = document.getElementById('enrollmentGoalField');
+        if (table === 'research_projects') {
+            enrollmentGoalField.classList.remove('d-none');
+        } else {
+            enrollmentGoalField.classList.add('d-none');
         }
     });
 </script>

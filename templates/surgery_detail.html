@@ -341,13 +341,18 @@
                         ] %}
                         
                         {% for key, label in main_complications %}
-                        <div class="col-md-6">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
-                                       {% if surgery.complications and surgery.complications.get(key) == 'yes' %}checked{% endif %}>
-                                <label class="form-check-label" for="comp-{{ key }}">
-                                    {{ label }}
-                                </label>
+                        <div class="col-md-6 mb-2">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
+                                           {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
+                                    <label class="form-check-label" for="comp-{{ key }}">
+                                        {{ label }}
+                                    </label>
+                                </div>
+                                <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 145px;"
+                                       value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}"
+                                       placeholder="Date">
                             </div>
                         </div>
                         {% endfor %}
@@ -365,13 +370,18 @@
                         ] %}
                         
                         {% for key, label in outcome_events %}
-                        <div class="col-md-6">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
-                                       {% if surgery.complications and surgery.complications.get(key) == 'yes' %}checked{% endif %}>
-                                <label class="form-check-label" for="comp-{{ key }}">
-                                    {{ label }}
-                                </label>
+                        <div class="col-md-6 mb-2">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
+                                           {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
+                                    <label class="form-check-label" for="comp-{{ key }}">
+                                        {{ label }}
+                                    </label>
+                                </div>
+                                <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 145px;"
+                                       value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}"
+                                       placeholder="Date">
                             </div>
                         </div>
                         {% endfor %}
