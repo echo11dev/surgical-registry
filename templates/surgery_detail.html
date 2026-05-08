@@ -358,8 +358,8 @@
                     <h6 class="mb-2 mt-3 text-primary"><i class="bi bi-person-walking me-2"></i>Hip Specific Complications</h6>
                     <div class="row g-2">
                         {% set hip_specific = [
-                            ('abductor_muscle_disruption', 'Abductor Muscle Disruption', 'Symptomatic abductor dysfunction with positive Trendelenburg sign (Hip specific).'),
-                            ('cup_liner_dissociation', 'Cup-Liner Dissociation', 'Dissociation of the acetabular liner from the shell (Hip specific).'),
+                            ('abductor_muscle_disruption', 'Abductor Muscle Disruption', 'Symptomatic abductor dysfunction with positive Trendelenburg sign (Hip).'),
+                            ('cup_liner_dissociation', 'Cup-Liner Dissociation', 'Dissociation of the acetabular liner from the shell (Hip).'),
                             ('dislocation_instability', 'Dislocation / Instability', 'Dislocation of the femoral head or recurrent symptomatic subluxation.')
                         ] %}
                         {% for key, label, desc in hip_specific %}
@@ -388,13 +388,13 @@
                     <h6 class="mb-2 mt-3 text-primary"><i class="bi bi-person-standing me-2"></i>Knee Specific Complications</h6>
                     <div class="row g-2">
                         {% set knee_specific = [
-                            ('medial_collateral_ligament_injury', 'Medial Collateral Ligament Injury', 'Intraoperative or early postoperative MCL injury requiring repair or increased constraint (Knee specific).'),
-                            ('instability', 'Instability', 'Symptomatic instability confirmed by laxity on physical examination (Knee specific).'),
-                            ('malalignment', 'Malalignment', 'Symptomatic malalignment >10° from the mechanical axis (Knee specific).'),
-                            ('extensor_mechanism_disruption', 'Extensor Mechanism Disruption', 'Disruption of quadriceps or patellar tendon (Knee specific).'),
-                            ('patellofemoral_dislocation', 'Patellofemoral Dislocation', 'Dislocation of the patella from the femoral trochlea (Knee specific).'),
-                            ('tibiofemoral_dislocation', 'Tibiofemoral Dislocation', 'Dislocation between tibia and femur (Knee specific).'),
-                            ('implant_fracture_tibial_insert_dissociation', 'Implant Fracture / Tibial Insert Dissociation', 'Fracture or dissociation of the tibial insert (Knee specific).')
+                            ('medial_collateral_ligament_injury', 'Medial Collateral Ligament Injury', 'Intraoperative or early postoperative MCL injury requiring repair or increased constraint (Knee).'),
+                            ('instability', 'Instability', 'Symptomatic instability confirmed by laxity on physical examination (Knee).'),
+                            ('malalignment', 'Malalignment', 'Symptomatic malalignment >10° from the mechanical axis (Knee).'),
+                            ('extensor_mechanism_disruption', 'Extensor Mechanism Disruption', 'Disruption of quadriceps or patellar tendon (Knee).'),
+                            ('patellofemoral_dislocation', 'Patellofemoral Dislocation', 'Dislocation of the patella from the femoral trochlea (Knee).'),
+                            ('tibiofemoral_dislocation', 'Tibiofemoral Dislocation', 'Dislocation between tibia and femur (Knee).'),
+                            ('implant_fracture_tibial_insert_dissociation', 'Implant Fracture / Tibial Insert Dissociation', 'Fracture or dissociation of the tibial insert (Knee).')
                         ] %}
                         {% for key, label, desc in knee_specific %}
                         <div class="col-md-6 mb-2">
@@ -480,7 +480,6 @@
                             ('heterotopic_ossification', 'Heterotopic Ossification')
                         ] %}
                         
-                        {% for key, label in main_complications %}
                         <div class="col-md-6 mb-2">
                             <div class="form-check form-switch mb-1">
                                 <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
@@ -533,13 +532,6 @@
                             </div>
                         </div>
                         {% endfor %}
-                    </div>
-                    
-                    <hr>
-                    <div class="d-flex justify-content-end">
-                        <button type="submit" class="btn btn-warning">
-                            <i class="bi bi-save me-1"></i> Save Complications
-                        </button>
                     </div>
                 </form>
             </div>
