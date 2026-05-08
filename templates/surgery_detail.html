@@ -342,17 +342,17 @@
                         
                         {% for key, label in main_complications %}
                         <div class="col-md-6 mb-2">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
-                                           {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
-                                    <label class="form-check-label" for="comp-{{ key }}">
-                                        {{ label }}
-                                    </label>
-                                </div>
-                                <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 145px;"
-                                       value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}"
-                                       placeholder="Date">
+                            <div class="form-check form-switch mb-1">
+                                <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
+                                       data-date-target="date-{{ key }}"
+                                       {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
+                                <label class="form-check-label" for="comp-{{ key }}">
+                                    {{ label }}
+                                </label>
+                            </div>
+                            <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
+                                <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 160px;"
+                                       value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}">
                             </div>
                         </div>
                         {% endfor %}
@@ -371,17 +371,17 @@
                         
                         {% for key, label in outcome_events %}
                         <div class="col-md-6 mb-2">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
-                                           {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
-                                    <label class="form-check-label" for="comp-{{ key }}">
-                                        {{ label }}
-                                    </label>
-                                </div>
-                                <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 145px;"
-                                       value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}"
-                                       placeholder="Date">
+                            <div class="form-check form-switch mb-1">
+                                <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
+                                       data-date-target="date-{{ key }}"
+                                       {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
+                                <label class="form-check-label" for="comp-{{ key }}">
+                                    {{ label }}
+                                </label>
+                            </div>
+                            <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
+                                <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 160px;"
+                                       value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}">
                             </div>
                         </div>
                         {% endfor %}
@@ -398,6 +398,45 @@
         </div>
 
     </div> <!-- End Complications Tab -->
+
+    <script>
+        // Show/hide complication date fields based on checkbox
+        function setupComplicationDateToggles() {
+            const toggles = document.querySelectorAll('.complication-toggle');
+            
+            toggles.forEach(toggle => {
+                const targetId = toggle.getAttribute('data-date-target');
+                const dateDiv = document.getElementById(targetId);
+                
+                if (!dateDiv) return;
+
+                // Initial state
+                if (toggle.checked) {
+                    dateDiv.style.display = 'block';
+                }
+
+                // On change
+                toggle.addEventListener('change', function() {
+                    if (this.checked) {
+                        dateDiv.style.display = 'block';
+                        // Optional: focus the date input
+                        const dateInput = dateDiv.querySelector('input[type="date"]');
+                        if (dateInput) dateInput.focus();
+                    } else {
+                        dateDiv.style.display = 'none';
+                        // Clear the date when unchecking (optional but clean)
+                        const dateInput = dateDiv.querySelector('input[type="date"]');
+                        if (dateInput) dateInput.value = '';
+                    }
+                });
+            });
+        }
+
+        // Initialize when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setupComplicationDateToggles();
+        });
+    </script>
 
 </div> <!-- End tab-content -->
 
