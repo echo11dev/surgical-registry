@@ -348,6 +348,10 @@
                                        {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
                                 <label class="form-check-label" for="comp-{{ key }}">
                                     {{ label }}
+                                    <i class="bi bi-info-circle text-muted ms-1" 
+                                       data-bs-toggle="tooltip" 
+                                       data-bs-placement="top"
+                                       title="Description based on Hip Society and Knee Society standardized complication lists."></i>
                                 </label>
                             </div>
                             <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
@@ -377,6 +381,10 @@
                                        {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
                                 <label class="form-check-label" for="comp-{{ key }}">
                                     {{ label }}
+                                    <i class="bi bi-info-circle text-muted ms-1" 
+                                       data-bs-toggle="tooltip" 
+                                       data-bs-placement="top"
+                                       title="Description based on Hip Society and Knee Society standardized complication lists."></i>
                                 </label>
                             </div>
                             <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
