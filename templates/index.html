@@ -301,14 +301,27 @@
                             <tr>
                                 <th>Research Project</th>
                                 <th class="text-end">Patients Enrolled</th>
+                                <th class="text-end">Goal</th>
+                                <th class="text-end">% Enrolled</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for name, count in research_enrollment %}
+                            {% for name, goal, count in research_enrollment %}
                             <tr>
                                 <td><strong>{{ name }}</strong></td>
                                 <td class="text-end">
                                     <span class="badge bg-primary rounded-pill px-3">{{ count }}</span>
+                                </td>
+                                <td class="text-end text-muted">{{ goal or '—' }}</td>
+                                <td class="text-end">
+                                    {% if goal and goal > 0 %}
+                                        {% set pct = (count / goal * 100) | round(1) %}
+                                        <span class="badge {% if pct >= 100 %}bg-success{% elif pct >= 50 %}bg-warning{% else %}bg-secondary{% endif %}">
+                                            {{ pct }}%
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}

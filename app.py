@@ -587,6 +587,7 @@ def dashboard():
     # Research Projects enrollment (unique patients per project)
     research_enrollment = db.session.query(
         ResearchProject.name,
+        ResearchProject.enrollment_goal,
         db.func.count(db.distinct(Patient.id)).label('patient_count')
     ).join(
         surgery_research_projects, ResearchProject.id == surgery_research_projects.c.research_project_id
@@ -594,7 +595,7 @@ def dashboard():
         Surgery, Surgery.id == surgery_research_projects.c.surgery_id
     ).join(
         Patient, Patient.id == Surgery.patient_id
-    ).group_by(ResearchProject.name).order_by(ResearchProject.name).all()
+    ).group_by(ResearchProject.name, ResearchProject.enrollment_goal).order_by(ResearchProject.name).all()
     
     # Complication & Outcome Metrics
     all_surgeries = Surgery.query.all()
@@ -1129,6 +1130,25 @@ def add_research_project_from_lookups():
     db.session.add(project)
     db.session.commit()
     flash(f'Research project "{name}" created successfully.', 'success')
+    return redirect(url_for('lookups') + '#research')
+
+
+@app.route('/lookups/research-projects/<int:project_id>/edit', methods=['POST'])
+def edit_research_project(project_id):
+    """Edit a research project from the Tables page"""
+    project = ResearchProject.query.get_or_404(project_id)
+    try:
+        project.name = request.form.get('name', '').strip()
+        project.sponsor = request.form.get('sponsor', '').strip() or None
+        project.description = request.form.get('description', '').strip() or None
+        project.enrollment_goal = request.form.get('enrollment_goal', type=int) or None
+
+        db.session.commit()
+        flash(f'Research project "{project.name}" updated successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating research project: {str(e)}', 'danger')
+
     return redirect(url_for('lookups') + '#research')
 
 
