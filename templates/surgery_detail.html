@@ -18,7 +18,9 @@
         <div class="row">
             <div class="col-md-8">
                 <div class="d-flex align-items-center mb-2">
-                    <h3 class="mb-0 me-3">{{ surgery.procedure_type.name if surgery.procedure_type else 'Surgical Procedure' }}</h3>
+                    <h3 class="mb-0 me-3">
+                        {% if surgery.side %}{{ surgery.side }} {% endif %}{{ surgery.procedure_type.name if surgery.procedure_type else 'Surgical Procedure' }}
+                    </h3>
                     <span class="badge bg-primary fs-6">{{ surgery.surgery_date.strftime('%B %d, %Y') }}</span>
                 </div>
                 <div class="text-muted">

@@ -209,24 +209,24 @@ def get_or_create_procedure_type(side, joint, surgery_type, primary_type=None):
     if surgery_type == 'Primary' and primary_type:
         if joint == 'Hip':
             if primary_type == 'Total':
-                name = f"{side} Total Hip Arthroplasty"
+                name = "Total Hip Arthroplasty"
             elif primary_type == 'Partial':
-                name = f"{side} Hip Hemiarthroplasty"
+                name = "Hip Hemiarthroplasty"
         elif joint == 'Knee':
             if primary_type == 'Total':
-                name = f"{side} Total Knee Arthroplasty"
+                name = "Total Knee Arthroplasty"
             elif primary_type == 'Partial':
-                name = f"{side} Unicompartmental Knee Arthroplasty"
+                name = "Unicompartmental Knee Arthroplasty"
     else:
-        # Revision or fallback
-        name = f"{side} {surgery_type} {joint} Arthroplasty"
+        # Revision or fallback - store base without side
+        name = f"{surgery_type} {joint} Arthroplasty"
     if not name:
         return None
     pt = ProcedureType.query.filter_by(name=name).first()
     if not pt:
         pt = ProcedureType(name=name)
         db.session.add(pt)
-        db.session.flush()  # get id without full commit yet
+        db.session.flush()
     return pt
 
 
@@ -268,16 +268,12 @@ def seed_initial_data():
         db.session.add(Gender(name=g))
 
     procedure_types = [
-        'Left Total Hip Arthroplasty',
-        'Right Total Hip Arthroplasty',
-        'Left Total Knee Arthroplasty',
-        'Right Total Knee Arthroplasty',
-        'Left Hip Hemiarthroplasty',
-        'Right Hip Hemiarthroplasty',
-        'Left Unicompartmental Knee Arthroplasty',
-        'Right Unicompartmental Knee Arthroplasty',
-        'Left Revision Hip Arthroplasty',
-        'Right Revision Knee Arthroplasty'
+        'Total Hip Arthroplasty',
+        'Total Knee Arthroplasty',
+        'Hip Hemiarthroplasty',
+        'Unicompartmental Knee Arthroplasty',
+        'Revision Hip Arthroplasty',
+        'Revision Knee Arthroplasty'
     ]
     for pt in procedure_types:
         db.session.add(ProcedureType(name=pt))
@@ -587,6 +583,18 @@ def dashboard():
     
     lookups = get_all_lookups()
     
+    # Research Projects enrollment (unique patients per project)
+    research_enrollment = db.session.query(
+        ResearchProject.name,
+        db.func.count(db.distinct(Patient.id)).label('patient_count')
+    ).join(
+        surgery_research_projects, ResearchProject.id == surgery_research_projects.c.research_project_id
+    ).join(
+        Surgery, Surgery.id == surgery_research_projects.c.surgery_id
+    ).join(
+        Patient, Patient.id == Surgery.patient_id
+    ).group_by(ResearchProject.name).order_by(ResearchProject.name).all()
+    
     # Complication & Outcome Metrics
     all_surgeries = Surgery.query.all()
     total_surgeries = len(all_surgeries)
@@ -635,7 +643,8 @@ def dashboard():
                           stats=stats, 
                           recent_surgeries=recent_surgeries,
                           top_procedures=top_procedures,
-                          lookups=lookups)
+                          lookups=lookups,
+                          research_enrollment=research_enrollment)
 
 # ---------- PATIENTS ----------
 @app.route('/patients')

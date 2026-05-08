@@ -81,7 +81,9 @@
                     </td>
                     <td>
                         {% if surgery.procedure_type %}
-                            <span class="badge badge-procedure">{{ surgery.procedure_type.name }}</span>
+                            <span class="badge badge-procedure">
+                                {% if surgery.side %}{{ surgery.side }} {% endif %}{{ surgery.procedure_type.name }}
+                            </span>
                         {% else %}
                             <span class="text-muted">—</span>
                         {% endif %}
