@@ -207,65 +207,127 @@
             </form>
         </div>
 
-        <!-- Complications Tab -->
+        <!-- Complications Tab - Previous grouped format -->
         <div class="tab-pane fade" id="complications" role="tabpanel">
             <h5 class="mb-3">Complications</h5>
-            <p class="text-muted mb-3">Record any complications using Yes/No toggles. Based on Knee Society and Hip Society standards.</p>
             <form method="POST" action="{{ url_for('save_complications', surgery_id=surgery.id) }}">
+                <!-- General Complications -->
+                <h6 class="mb-2 mt-2 text-primary"><i class="bi bi-globe2 me-2"></i>General Complications</h6>
                 <div class="row g-2">
-                    {% set main_complications = [
-                        ('bleeding', 'Bleeding'),
-                        ('wound_complication', 'Wound Complication'),
-                        ('thromboembolic_disease', 'Thromboembolic Disease'),
-                        ('neural_deficit', 'Neural Deficit'),
-                        ('vascular_injury', 'Vascular Injury'),
-                        ('medial_collateral_ligament_injury', 'MCL Injury'),
-                        ('instability', 'Instability'),
-                        ('malalignment', 'Malalignment'),
-                        ('stiffness', 'Stiffness'),
-                        ('deep_periprosthetic_joint_infection', 'Deep PJI'),
-                        ('periprosthetic_fracture', 'Periprosthetic Fracture'),
-                        ('extensor_mechanism_disruption', 'Extensor Disruption'),
-                        ('patellofemoral_dislocation', 'Patellofemoral Dislocation'),
-                        ('tibiofemoral_dislocation', 'Tibiofemoral Dislocation'),
-                        ('bearing_surface_wear', 'Bearing Wear'),
-                        ('osteolysis', 'Osteolysis'),
-                        ('implant_loosening', 'Implant Loosening'),
-                        ('implant_fracture_tibial_insert_dissociation', 'Implant Fracture'),
-                        ('cup_liner_dissociation', 'Cup-Liner Dissociation'),
-                        ('abductor_muscle_disruption', 'Abductor Disruption'),
-                        ('heterotopic_ossification', 'Heterotopic Ossification')
+                    {% set general_complications = [
+                        ('bleeding', 'Bleeding', 'Postoperative bleeding requiring surgical treatment.'),
+                        ('wound_complication', 'Wound Complication', 'Failure of wound healing requiring reoperation or change in protocol.'),
+                        ('thromboembolic_disease', 'Thromboembolic Disease', 'Symptomatic DVT or PE requiring intensified anticoagulation in first 3 months.'),
+                        ('neural_deficit', 'Neural Deficit', 'Postoperative sensory or motor nerve deficit related to the index procedure.'),
+                        ('vascular_injury', 'Vascular Injury', 'Intraoperative vascular injury requiring surgical repair, bypass or stenting.'),
+                        ('periprosthetic_fracture', 'Periprosthetic Fracture', 'Fracture of distal femur, proximal tibia, patella or acetabulum.'),
+                        ('heterotopic_ossification', 'Heterotopic Ossification', 'Symptomatic abnormal bone formation (Brooker III/IV) causing stiffness at 1 year.'),
+                        ('stiffness', 'Stiffness', 'Limited ROM: extension deficit ≥15° or flexion <90°.'),
+                        ('bearing_surface_wear', 'Bearing Surface Wear', 'Symptomatic wear of the bearing surface or requiring reoperation.'),
+                        ('osteolysis', 'Osteolysis', 'Expansile lytic lesion ≥1 cm adjacent to implant or increasing in size.'),
+                        ('implant_loosening', 'Implant Loosening', 'Implant loosening confirmed radiographically or intraoperatively.')
                     ] %}
-                    {% for key, label in main_complications %}
+                    {% for key, label, desc in general_complications %}
                     <div class="col-md-6 mb-2">
-                        <div class="form-check form-switch">
+                        <div class="form-check form-switch mb-1">
                             <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
-                                   {% if surgery.complications and surgery.complications.get(key) == 'yes' %}checked{% endif %}>
+                                   data-date-target="date-{{ key }}"
+                                   {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
                             <label class="form-check-label" for="comp-{{ key }}">
                                 {{ label }}
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ desc }}"></i>
                             </label>
+                        </div>
+                        <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
+                            <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 160px;"
+                                   value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}">
                         </div>
                     </div>
                     {% endfor %}
                 </div>
 
+                <!-- Hip Specific -->
+                <h6 class="mb-2 mt-3 text-primary"><i class="bi bi-person-walking me-2"></i>Hip Specific Complications</h6>
+                <div class="row g-2">
+                    {% set hip_specific = [
+                        ('abductor_muscle_disruption', 'Abductor Muscle Disruption', 'Symptomatic abductor dysfunction with positive Trendelenburg sign.'),
+                        ('cup_liner_dissociation', 'Cup-Liner Dissociation', 'Dissociation of the acetabular liner from the shell.'),
+                        ('dislocation_instability', 'Dislocation / Instability', 'Dislocation of the femoral head or recurrent symptomatic subluxation.')
+                    ] %}
+                    {% for key, label, desc in hip_specific %}
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check form-switch mb-1">
+                            <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
+                                   data-date-target="date-{{ key }}"
+                                   {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
+                            <label class="form-check-label" for="comp-{{ key }}">
+                                {{ label }}
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ desc }}"></i>
+                            </label>
+                        </div>
+                        <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
+                            <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 160px;"
+                                   value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}">
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Knee Specific -->
+                <h6 class="mb-2 mt-3 text-primary"><i class="bi bi-person-standing me-2"></i>Knee Specific Complications</h6>
+                <div class="row g-2">
+                    {% set knee_specific = [
+                        ('medial_collateral_ligament_injury', 'Medial Collateral Ligament Injury', 'Intraoperative or early postoperative MCL injury requiring repair or increased constraint.'),
+                        ('instability', 'Instability', 'Symptomatic instability confirmed by laxity on physical examination.'),
+                        ('malalignment', 'Malalignment', 'Symptomatic malalignment >10° from the mechanical axis.'),
+                        ('extensor_mechanism_disruption', 'Extensor Mechanism Disruption', 'Disruption of quadriceps or patellar tendon.'),
+                        ('patellofemoral_dislocation', 'Patellofemoral Dislocation', 'Dislocation of the patella from the femoral trochlea.'),
+                        ('tibiofemoral_dislocation', 'Tibiofemoral Dislocation', 'Dislocation between tibia and femur.'),
+                        ('implant_fracture_tibial_insert_dissociation', 'Implant Fracture / Tibial Insert Dissociation', 'Fracture or dissociation of the tibial insert.')
+                    ] %}
+                    {% for key, label, desc in knee_specific %}
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check form-switch mb-1">
+                            <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
+                                   data-date-target="date-{{ key }}"
+                                   {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
+                            <label class="form-check-label" for="comp-{{ key }}">
+                                {{ label }}
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ desc }}"></i>
+                            </label>
+                        </div>
+                        <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
+                            <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 160px;"
+                                   value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}">
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Key Outcome Events -->
                 <hr class="my-3">
                 <h6 class="mb-2 text-muted"><i class="bi bi-clipboard-check me-1"></i>Key Outcome Events</h6>
                 <div class="row g-2">
                     {% set outcome_events = [
-                        ('reoperation', 'Reoperation'),
-                        ('readmission', 'Readmission'),
-                        ('revision', 'Revision'),
-                        ('death', 'Death')
+                        ('reoperation', 'Reoperation', 'Return to the operating room related to the index procedure.'),
+                        ('readmission', 'Readmission', 'Hospital readmission for any reason during the first 90 days after surgery.'),
+                        ('revision', 'Revision', 'Removal or exchange of one or more of the implants.'),
+                        ('death', 'Death', 'Death occurring for any reason during the first 90 days after surgery.')
                     ] %}
-                    {% for key, label in outcome_events %}
+                    {% for key, label, desc in outcome_events %}
                     <div class="col-md-6 mb-2">
-                        <div class="form-check form-switch">
+                        <div class="form-check form-switch mb-1">
                             <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
-                                   {% if surgery.complications and surgery.complications.get(key) == 'yes' %}checked{% endif %}>
+                                   data-date-target="date-{{ key }}"
+                                   {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
                             <label class="form-check-label" for="comp-{{ key }}">
                                 {{ label }}
+                                <i class="bi bi-info-circle text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ desc }}"></i>
                             </label>
+                        </div>
+                        <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
+                            <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 160px;"
+                                   value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}">
                         </div>
                     </div>
                     {% endfor %}
@@ -287,25 +349,23 @@
 
 {% block extra_js %}
 <script>
-    // Simple date toggle for complications
+    // Show/hide complication date fields based on checkbox
     document.addEventListener('DOMContentLoaded', function() {
         const toggles = document.querySelectorAll('.complication-toggle');
         toggles.forEach(toggle => {
             const targetId = toggle.getAttribute('data-date-target');
-            if (targetId) {
-                const dateDiv = document.getElementById(targetId);
-                if (dateDiv) {
-                    if (toggle.checked) {
-                        dateDiv.style.display = 'block';
-                    }
-                    toggle.addEventListener('change', function() {
-                        if (this.checked) {
-                            dateDiv.style.display = 'block';
-                        } else {
-                            dateDiv.style.display = 'none';
-                        }
-                    });
+            const dateDiv = document.getElementById(targetId);
+            if (dateDiv) {
+                if (toggle.checked) {
+                    dateDiv.style.display = 'block';
                 }
+                toggle.addEventListener('change', function() {
+                    if (this.checked) {
+                        dateDiv.style.display = 'block';
+                    } else {
+                        dateDiv.style.display = 'none';
+                    }
+                });
             }
         });
     });
