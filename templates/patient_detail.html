@@ -79,7 +79,7 @@
                     <td>
                         <strong>{{ surgery.surgery_date.strftime('%b %d, %Y') }}</strong>
                         {% if surgery.id in superseded_ids %}
-                            <span class="badge bg-secondary ms-1">Superseded</span>
+                            <span class="badge bg-secondary ms-1">Revised</span>
                         {% endif %}
                         {% if surgery.revision_of_id %}
                             <span class="badge bg-info ms-1">Revision</span>
@@ -427,6 +427,19 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCalculatedProcedure(addForm);
     }
 
+    // Populate existing arthroplasties data for revision detection + primary prevention
+    window.existingArthroplasties = [
+        {% for s in surgeries if s.joint and s.side %}
+        { 
+            id: {{ s.id }}, 
+            joint: "{{ s.joint }}", 
+            side: "{{ s.side }}", 
+            surgery_type: "{{ s.surgery_type or '' }}",
+            date: "{{ s.surgery_date.strftime('%b %d, %Y') }}" 
+        },
+        {% endfor %}
+    ];
+
     // === Revision / Same Joint+Side Detection Logic ===
     const surgeryForm = document.getElementById('addSurgeryForm');
     if (surgeryForm) {
@@ -445,6 +458,66 @@ document.addEventListener('DOMContentLoaded', function() {
                 showRevisionConfirmation(existing, surgeryForm);
             }
         });
+
+        // === Client-side Prevention: Block Primary if one already exists ===
+        const sideSelect = surgeryForm.querySelector('select[name="side"]');
+        const jointSelect = surgeryForm.querySelector('select[name="joint"]');
+        const surgeryTypeSelect = surgeryForm.querySelector('select[name="surgery_type"]');
+
+        function updatePrimaryOption() {
+            if (!sideSelect || !jointSelect || !surgeryTypeSelect) return;
+
+            const joint = jointSelect.value;
+            const side = sideSelect.value;
+
+            if (!joint || !side) {
+                // Re-enable Primary if no joint/side selected
+                const primaryOption = surgeryTypeSelect.querySelector('option[value="Primary"]');
+                if (primaryOption) primaryOption.disabled = false;
+                return;
+            }
+
+            // Check if a Primary already exists for this joint + side
+            const hasPrimary = (window.existingArthroplasties || []).some(s =>
+                s.joint === joint && s.side === side && s.surgery_type === 'Primary'
+            );
+
+            const primaryOption = surgeryTypeSelect.querySelector('option[value="Primary"]');
+            if (!primaryOption) return;
+
+            if (hasPrimary) {
+                primaryOption.disabled = true;
+
+                // If currently selected Primary, switch to Revision
+                if (surgeryTypeSelect.value === 'Primary') {
+                    surgeryTypeSelect.value = 'Revision';
+                    surgeryTypeSelect.dispatchEvent(new Event('change'));
+                }
+
+                // Show warning
+                let warning = surgeryForm.querySelector('#primary-blocked-warning');
+                if (!warning) {
+                    warning = document.createElement('div');
+                    warning.id = 'primary-blocked-warning';
+                    warning.className = 'text-danger small mt-1';
+                    warning.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>A Primary already exists for this joint and side. Only Revision is allowed.';
+                    surgeryTypeSelect.parentNode.appendChild(warning);
+                }
+            } else {
+                primaryOption.disabled = false;
+
+                // Remove warning if exists
+                const warning = surgeryForm.querySelector('#primary-blocked-warning');
+                if (warning) warning.remove();
+            }
+        }
+
+        // Attach listeners
+        if (sideSelect) sideSelect.addEventListener('change', updatePrimaryOption);
+        if (jointSelect) jointSelect.addEventListener('change', updatePrimaryOption);
+
+        // Run once on load in case values are pre-selected
+        updatePrimaryOption();
     }
 });
 

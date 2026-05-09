@@ -813,6 +813,19 @@ def add_surgery():
             flash('Patient, Date, Side, Joint and Surgery Type are required.', 'danger')
             return redirect(request.referrer or url_for('patients_list'))
 
+        # Prevent multiple Primary surgeries on the same joint + side
+        if surgery_type == 'Primary':
+            existing_primary = Surgery.query.filter(
+                Surgery.patient_id == patient_id,
+                Surgery.joint == joint,
+                Surgery.side == side,
+                Surgery.surgery_type == 'Primary'
+            ).first()
+            if existing_primary:
+                flash(f'A Primary {joint} arthroplasty on the {side} side already exists for this patient. '
+                      'You cannot create another Primary surgery for the same joint and side.', 'danger')
+                return redirect(request.referrer or url_for('patient_detail', patient_id=patient_id))
+
         surgery_date = datetime.strptime(surgery_date_str, '%Y-%m-%d').date()
 
         # Calculate Procedure Type (and create if new name)
