@@ -37,6 +37,13 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 # Initialize SQLAlchemy
 db = SQLAlchemy(app)
 
+# Context processor to make current date available in all templates (for dynamic banner)
+@app.context_processor
+def inject_current_date():
+    """Provide current date to all templates for the top banner."""
+    from datetime import date
+    return {'current_date': date.today().strftime('%B %d, %Y')}
+
 # ==================== MODELS ====================
 
 class Gender(db.Model):
@@ -612,15 +619,21 @@ def dashboard():
             1 for s in all_surgeries 
             if s.complications and s.complications.get('deep_periprosthetic_joint_infection') == 'yes'
         )
-        # 30-day readmission
+        # 30-day readmission (note: field is "readmission" per 90-day definition in Hip/Knee Society)
         readmission_30d_count = sum(
             1 for s in all_surgeries 
             if s.complications and s.complications.get('readmission') == 'yes'
+        )
+        # Reoperation rate
+        reoperation_count = sum(
+            1 for s in all_surgeries 
+            if s.complications and s.complications.get('reoperation') == 'yes'
         )
         
         stats['complication_rate'] = round((surgeries_with_any_complication / total_surgeries) * 100, 1)
         stats['deep_infection_rate'] = round((deep_infection_count / total_surgeries) * 100, 1)
         stats['readmission_30d_rate'] = round((readmission_30d_count / total_surgeries) * 100, 1)
+        stats['reoperation_rate'] = round((reoperation_count / total_surgeries) * 100, 1) if total_surgeries > 0 else 0
 
         # Revision Burden (% of surgeries that are revisions)
         revision_count = sum(1 for s in all_surgeries if getattr(s, 'surgery_type', None) == 'Revision')
@@ -638,6 +651,7 @@ def dashboard():
         stats['complication_rate'] = 0
         stats['deep_infection_rate'] = 0
         stats['readmission_30d_rate'] = 0
+        stats['reoperation_rate'] = 0
         stats['revision_burden'] = 0
         stats['outpatient_joint_percent'] = 0
     
