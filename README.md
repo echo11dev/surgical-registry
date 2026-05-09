@@ -40,13 +40,13 @@ The database (`/tmp/surgical_registry.db`) is created automatically on first run
 ```
 Patient (1) ────< (many) Surgery (1) ────< (many) Implant
      │                  │
-     └── Gender         ├── ProcedureType
-                        ├── Surgeon
-                        └── Hospital
+     └─── Gender         ├─── ProcedureType
+                        ├─── Surgeon
+                        └─── Hospital
 
 Implant
-├── ImplantType
-└── Manufacturer
+├─── ImplantType
+└─── Manufacturer
 ```
 
 All foreign keys are properly indexed and relationships use SQLAlchemy ORM with cascade deletes.
