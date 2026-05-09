@@ -457,50 +457,6 @@
                         </button>
                     </div>
                 </form>
-                            ('bleeding', 'Bleeding'),
-                            ('wound_complication', 'Wound Complication'),
-                            ('thromboembolic_disease', 'Thromboembolic Disease'),
-                            ('neural_deficit', 'Neural Deficit'),
-                            ('vascular_injury', 'Vascular Injury'),
-                            ('medial_collateral_ligament_injury', 'Medial Collateral Ligament Injury'),
-                            ('instability', 'Instability / Dislocation'),
-                            ('malalignment', 'Malalignment'),
-                            ('stiffness', 'Stiffness'),
-                            ('deep_periprosthetic_joint_infection', 'Deep Periprosthetic Joint Infection'),
-                            ('periprosthetic_fracture', 'Periprosthetic Fracture'),
-                            ('extensor_mechanism_disruption', 'Extensor Mechanism Disruption'),
-                            ('patellofemoral_dislocation', 'Patellofemoral Dislocation'),
-                            ('tibiofemoral_dislocation', 'Tibiofemoral Dislocation'),
-                            ('bearing_surface_wear', 'Bearing Surface Wear'),
-                            ('osteolysis', 'Osteolysis'),
-                            ('implant_loosening', 'Implant Loosening'),
-                            ('implant_fracture_tibial_insert_dissociation', 'Implant Fracture / Tibial Insert Dissociation'),
-                            ('cup_liner_dissociation', 'Cup-Liner Dissociation'),
-                            ('abductor_muscle_disruption', 'Abductor Muscle Disruption'),
-                            ('heterotopic_ossification', 'Heterotopic Ossification')
-                        ] %}
-                        
-                        <div class="col-md-6 mb-2">
-                            <div class="form-check form-switch mb-1">
-                                <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
-                                       data-date-target="date-{{ key }}"
-                                       {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
-                                <label class="form-check-label" for="comp-{{ key }}">
-                                    {{ label }}
-                                    <i class="bi bi-info-circle text-muted ms-1" 
-                                       data-bs-toggle="tooltip" 
-                                       data-bs-placement="top"
-                                       title="Description based on Hip Society and Knee Society standardized complication lists."></i>
-                                </label>
-                            </div>
-                            <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
-                                <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 160px;"
-                                       value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}">
-                            </div>
-                        </div>
-                    </div>
-
-                </form>
             </div>
         </div>
 
