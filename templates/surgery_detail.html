@@ -1,4 +1,75 @@
-{% extends "base.html" %}
+        <!-- Complications Tab -->
+        <div class="tab-pane fade" id="complications" role="tabpanel">
+            <h5 class="mb-3">Complications</h5>
+            <p class="text-muted mb-3">Record any complications using Yes/No toggles. Based on Knee Society and Hip Society standards.</p>
+            <form method="POST" action="{{ url_for('save_complications', surgery_id=surgery.id) }}">
+                <div class="row g-2">
+                    {% set main_complications = [
+                        ('bleeding', 'Bleeding'),
+                        ('wound_complication', 'Wound Complication'),
+                        ('thromboembolic_disease', 'Thromboembolic Disease'),
+                        ('neural_deficit', 'Neural Deficit'),
+                        ('vascular_injury', 'Vascular Injury'),
+                        ('medial_collateral_ligament_injury', 'MCL Injury'),
+                        ('instability', 'Instability'),
+                        ('malalignment', 'Malalignment'),
+                        ('stiffness', 'Stiffness'),
+                        ('deep_periprosthetic_joint_infection', 'Deep PJI'),
+                        ('periprosthetic_fracture', 'Periprosthetic Fracture'),
+                        ('extensor_mechanism_disruption', 'Extensor Disruption'),
+                        ('patellofemoral_dislocation', 'Patellofemoral Dislocation'),
+                        ('tibiofemoral_dislocation', 'Tibiofemoral Dislocation'),
+                        ('bearing_surface_wear', 'Bearing Wear'),
+                        ('osteolysis', 'Osteolysis'),
+                        ('implant_loosening', 'Implant Loosening'),
+                        ('implant_fracture_tibial_insert_dissociation', 'Implant Fracture'),
+                        ('cup_liner_dissociation', 'Cup-Liner Dissociation'),
+                        ('abductor_muscle_disruption', 'Abductor Disruption'),
+                        ('heterotopic_ossification', 'Heterotopic Ossification')
+                    ] %}
+                    {% for key, label in main_complications %}
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
+                                   {% if surgery.complications and surgery.complications.get(key) == 'yes' %}checked{% endif %}>
+                            <label class="form-check-label" for="comp-{{ key }}">
+                                {{ label }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <hr class="my-3">
+                <h6 class="mb-2 text-muted"><i class="bi bi-clipboard-check me-1"></i>Key Outcome Events</h6>
+                <div class="row g-2">
+                    {% set outcome_events = [
+                        ('reoperation', 'Reoperation'),
+                        ('readmission', 'Readmission'),
+                        ('revision', 'Revision'),
+                        ('death', 'Death')
+                    ] %}
+                    {% for key, label in outcome_events %}
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
+                                   {% if surgery.complications and surgery.complications.get(key) == 'yes' %}checked{% endif %}>
+                            <label class="form-check-label" for="comp-{{ key }}">
+                                {{ label }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <hr>
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-save me-1"></i> Save Complications
+                    </button>
+                </div>
+            </form>
+        </div>{% extends "base.html" %}
 
 {% block title %}Surgery Details • Surgical Registry{% endblock %}
 
