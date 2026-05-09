@@ -307,96 +307,186 @@
     <!-- Complications Tab -->
     <div class="tab-pane fade" id="complications" role="tabpanel">
 
-        <div class="card">
+        <div class="card border-warning">
             <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Complications</h5>
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Complications &amp; Adverse Events</h5>
             </div>
             <div class="card-body">
-                <p class="text-muted small">Record any complications that occurred for this surgery using Yes/No toggles. Based on standardized lists from The Knee Society and The Hip Society.</p>
+                <p class="text-muted small mb-3">
+                    Record complications using the <strong>standardized lists and definitions</strong> from 
+                    <strong>The Knee Society</strong> (TKA, 2013) and <strong>The Hip Society</strong> (THA, 2015). 
+                    These enable consistent reporting, benchmarking, quality improvement, and future research projects in the 
+                    University of Miami Hip &amp; Knee Arthroplasty Registry. 
+                    Click the <i class="bi bi-info-circle text-primary"></i> icon next to any item for the official definition.
+                </p>
                 
                 <form method="POST" action="{{ url_for('save_complications', surgery_id=surgery.id) }}">
-                    <div class="row g-2">
-                        {% set main_complications = [
-                            ('bleeding', 'Bleeding'),
-                            ('wound_complication', 'Wound Complication'),
-                            ('thromboembolic_disease', 'Thromboembolic Disease'),
-                            ('neural_deficit', 'Neural Deficit'),
-                            ('vascular_injury', 'Vascular Injury'),
-                            ('medial_collateral_ligament_injury', 'Medial Collateral Ligament Injury'),
-                            ('instability', 'Instability / Dislocation'),
-                            ('malalignment', 'Malalignment'),
-                            ('stiffness', 'Stiffness'),
-                            ('deep_periprosthetic_joint_infection', 'Deep Periprosthetic Joint Infection'),
-                            ('periprosthetic_fracture', 'Periprosthetic Fracture'),
-                            ('extensor_mechanism_disruption', 'Extensor Mechanism Disruption'),
-                            ('patellofemoral_dislocation', 'Patellofemoral Dislocation'),
-                            ('tibiofemoral_dislocation', 'Tibiofemoral Dislocation'),
-                            ('bearing_surface_wear', 'Bearing Surface Wear'),
-                            ('osteolysis', 'Osteolysis'),
-                            ('implant_loosening', 'Implant Loosening'),
-                            ('implant_fracture_tibial_insert_dissociation', 'Implant Fracture / Tibial Insert Dissociation'),
-                            ('cup_liner_dissociation', 'Cup-Liner Dissociation'),
-                            ('abductor_muscle_disruption', 'Abductor Muscle Disruption'),
-                            ('heterotopic_ossification', 'Heterotopic Ossification')
-                        ] %}
-                        
-                        {% for key, label in main_complications %}
-                        <div class="col-md-6 mb-2">
-                            <div class="form-check form-switch mb-1">
-                                <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
-                                       data-date-target="date-{{ key }}"
-                                       {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
-                                <label class="form-check-label" for="comp-{{ key }}">
-                                    {{ label }}
-                                    <i class="bi bi-info-circle text-muted ms-1" 
-                                       data-bs-toggle="tooltip" 
-                                       data-bs-placement="top"
-                                       title="Description based on Hip Society and Knee Society standardized complication lists."></i>
-                                </label>
-                            </div>
-                            <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
-                                <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 160px;"
-                                       value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}">
-                            </div>
+                    
+                    <!-- 1. GENERAL COMPLICATIONS (Common to Hip & Knee) -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-2 pb-1 border-bottom">
+                            <h6 class="mb-0 text-dark"><i class="bi bi-collection me-2"></i>General Complications (Common to Hip &amp; Knee)</h6>
+                            <span class="badge bg-secondary ms-auto">11 items</span>
                         </div>
-                        {% endfor %}
+                        <div class="row g-2">
+                            {% set general_complications = [
+                                ('bleeding', 'Bleeding'),
+                                ('wound_complication', 'Wound Complication'),
+                                ('thromboembolic_disease', 'Thromboembolic Disease'),
+                                ('neural_deficit', 'Neural Deficit'),
+                                ('vascular_injury', 'Vascular Injury'),
+                                ('instability', 'Instability / Dislocation (Hip or Knee)'),
+                                ('deep_periprosthetic_joint_infection', 'Deep Periprosthetic Joint Infection'),
+                                ('periprosthetic_fracture', 'Periprosthetic Fracture'),
+                                ('bearing_surface_wear', 'Bearing Surface Wear'),
+                                ('osteolysis', 'Osteolysis'),
+                                ('implant_loosening', 'Implant Loosening'),
+                                ('implant_fracture_tibial_insert_dissociation', 'Implant Fracture / Tibial Insert Dissociation')
+                            ] %}
+                            {% for key, label in general_complications %}
+                            <div class="col-lg-6 col-xl-4 mb-2">
+                                <div class="form-check form-switch mb-1">
+                                    <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
+                                           data-date-target="date-{{ key }}"
+                                           {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
+                                    <label class="form-check-label small" for="comp-{{ key }}">
+                                        {{ label }}
+                                        <i class="bi bi-info-circle text-primary ms-1 info-icon" 
+                                           style="cursor: pointer;"
+                                           data-key="{{ key }}"
+                                           data-label="{{ label }}"
+                                           onclick="showComplicationInfo(this)"></i>
+                                    </label>
+                                </div>
+                                <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
+                                    <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 155px;"
+                                           value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}">
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
 
-                    <!-- Separate section for key outcome/admin events -->
-                    <hr class="my-3">
-                    <h6 class="mb-2 text-muted"><i class="bi bi-clipboard-check me-1"></i>Key Outcome Events</h6>
-                    <div class="row g-2">
-                        {% set outcome_events = [
-                            ('reoperation', 'Reoperation'),
-                            ('readmission', 'Readmission'),
-                            ('revision', 'Revision'),
-                            ('death', 'Death')
-                        ] %}
-                        
-                        {% for key, label in outcome_events %}
-                        <div class="col-md-6 mb-2">
-                            <div class="form-check form-switch mb-1">
-                                <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
-                                       data-date-target="date-{{ key }}"
-                                       {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
-                                <label class="form-check-label" for="comp-{{ key }}">
-                                    {{ label }}
-                                    <i class="bi bi-info-circle text-muted ms-1" 
-                                       data-bs-toggle="tooltip" 
-                                       data-bs-placement="top"
-                                       title="Description based on Hip Society and Knee Society standardized complication lists."></i>
-                                </label>
-                            </div>
-                            <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
-                                <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 160px;"
-                                       value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}">
-                            </div>
+                    <!-- 2. HIP-SPECIFIC COMPLICATIONS -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-2 pb-1 border-bottom border-primary">
+                            <h6 class="mb-0 text-primary"><i class="bi bi-broadcast-pin me-2"></i>Hip-Specific Complications</h6>
+                            <span class="badge bg-primary ms-auto">3 items</span>
                         </div>
-                        {% endfor %}
+                        <div class="row g-2">
+                            {% set hip_complications = [
+                                ('abductor_muscle_disruption', 'Abductor Muscle Disruption'),
+                                ('heterotopic_ossification', 'Heterotopic Ossification'),
+                                ('cup_liner_dissociation', 'Cup-Liner Dissociation')
+                            ] %}
+                            {% for key, label in hip_complications %}
+                            <div class="col-lg-6 col-xl-4 mb-2">
+                                <div class="form-check form-switch mb-1">
+                                    <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
+                                           data-date-target="date-{{ key }}"
+                                           {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
+                                    <label class="form-check-label small" for="comp-{{ key }}">
+                                        {{ label }}
+                                        <i class="bi bi-info-circle text-primary ms-1 info-icon" 
+                                           style="cursor: pointer;"
+                                           data-key="{{ key }}"
+                                           data-label="{{ label }}"
+                                           onclick="showComplicationInfo(this)"></i>
+                                    </label>
+                                </div>
+                                <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
+                                    <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 155px;"
+                                           value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}">
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="small text-muted mt-1">Note: "Instability / Dislocation" is listed under General Complications (applies to both hip and knee with procedure-specific definitions).</div>
+                    </div>
+
+                    <!-- 3. KNEE-SPECIFIC COMPLICATIONS -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-2 pb-1 border-bottom border-success">
+                            <h6 class="mb-0 text-success"><i class="bi bi-shield-check me-2"></i>Knee-Specific Complications</h6>
+                            <span class="badge bg-success ms-auto">6 items</span>
+                        </div>
+                        <div class="row g-2">
+                            {% set knee_complications = [
+                                ('medial_collateral_ligament_injury', 'Medial Collateral Ligament Injury'),
+                                ('malalignment', 'Malalignment'),
+                                ('stiffness', 'Stiffness'),
+                                ('extensor_mechanism_disruption', 'Extensor Mechanism Disruption'),
+                                ('patellofemoral_dislocation', 'Patellofemoral Dislocation'),
+                                ('tibiofemoral_dislocation', 'Tibiofemoral Dislocation')
+                            ] %}
+                            {% for key, label in knee_complications %}
+                            <div class="col-lg-6 col-xl-4 mb-2">
+                                <div class="form-check form-switch mb-1">
+                                    <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
+                                           data-date-target="date-{{ key }}"
+                                           {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
+                                    <label class="form-check-label small" for="comp-{{ key }}">
+                                        {{ label }}
+                                        <i class="bi bi-info-circle text-success ms-1 info-icon" 
+                                           style="cursor: pointer;"
+                                           data-key="{{ key }}"
+                                           data-label="{{ label }}"
+                                           onclick="showComplicationInfo(this)"></i>
+                                    </label>
+                                </div>
+                                <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
+                                    <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 155px;"
+                                           value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}">
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- 4. KEY OUTCOME EVENTS -->
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center mb-2 pb-1 border-bottom border-danger">
+                            <h6 class="mb-0 text-danger"><i class="bi bi-clipboard-check me-2"></i>Key Outcome Events (Critical for 90-Day Reporting)</h6>
+                            <span class="badge bg-danger ms-auto">4 items</span>
+                        </div>
+                        <div class="row g-2">
+                            {% set outcome_events = [
+                                ('reoperation', 'Reoperation'),
+                                ('readmission', 'Readmission (within 90 days)'),
+                                ('revision', 'Revision'),
+                                ('death', 'Death (within 90 days)')
+                            ] %}
+                            
+                            {% for key, label in outcome_events %}
+                            <div class="col-lg-6 col-xl-3 mb-2">
+                                <div class="form-check form-switch mb-1">
+                                    <input class="form-check-input complication-toggle" type="checkbox" id="comp-{{ key }}" name="{{ key }}" value="yes"
+                                           data-date-target="date-{{ key }}"
+                                           {% if surgery.complications and (surgery.complications.get(key) == 'yes' or (surgery.complications.get(key) is mapping and surgery.complications.get(key).get('value') == 'yes')) %}checked{% endif %}>
+                                    <label class="form-check-label small" for="comp-{{ key }}">
+                                        {{ label }}
+                                        <i class="bi bi-info-circle text-danger ms-1 info-icon" 
+                                           style="cursor: pointer;"
+                                           data-key="{{ key }}"
+                                           data-label="{{ label }}"
+                                           onclick="showComplicationInfo(this)"></i>
+                                    </label>
+                                </div>
+                                <div id="date-{{ key }}" class="complication-date ms-4" style="display: none;">
+                                    <input type="date" name="{{ key }}_date" class="form-control form-control-sm" style="width: 155px;"
+                                           value="{% if surgery.complications and surgery.complications.get(key) is mapping %}{{ surgery.complications.get(key).get('date') or '' }}{% endif %}">
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="small text-muted">These events are essential for public reporting, CMS metrics, and our registry's complication tracking.</div>
                     </div>
                     
-                    <hr>
-                    <div class="d-flex justify-content-end">
+                    <hr class="my-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="small text-muted">
+                            <i class="bi bi-info-circle me-1"></i> Date fields appear when a complication is marked "Yes" (optional but recommended for research).
+                        </div>
                         <button type="submit" class="btn btn-warning">
                             <i class="bi bi-save me-1"></i> Save Complications
                         </button>
@@ -407,8 +497,88 @@
 
     </div> <!-- End Complications Tab -->
 
+    <!-- Complication Definition Modal -->
+    <div class="modal fade" id="complicationInfoModal" tabindex="-1" aria-labelledby="complicationInfoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="compModalTitle"><i class="bi bi-exclamation-triangle me-2"></i>Complication Definition</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="compModalBody">
+                    <!-- Populated dynamically by JS -->
+                </div>
+                <div class="modal-footer">
+                    <small class="text-muted me-auto">Source: The Hip Society (2015) &amp; The Knee Society (2013) Standardized Lists — University of Miami Arthroplasty Registry</small>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Show/hide complication date fields based on checkbox
+        // Comprehensive definitions from The Hip Society (THA 2015) and The Knee Society (TKA 2013)
+        const complicationDefinitions = {
+            'bleeding': 'Postoperative bleeding requiring surgical treatment. (ICD-9 998.11)<br><br>Stratification: Grade 3–5 depending on severity and need for reoperation or transfusion.',
+            'wound_complication': 'Failure of wound healing requiring reoperation or a change in TKA/THA protocol. (ICD-9 998.32)<br><br>Includes dehiscence, hematoma requiring evacuation, or persistent drainage. Suture/staple erythema alone is NOT a complication.',
+            'thromboembolic_disease': 'Symptomatic thromboembolic event (DVT or PE) requiring more intensive, nonprophylactic anticoagulant or antithrombotic treatment during the first 3 months after index procedure. (ICD-9 453.40)',
+            'neural_deficit': 'Postoperative neural deficit (sensory or motor) related to the index procedure. (ICD-9 997.09)<br><br>Record if complete recovery or permanent disability. Stratification: Grade 1–3 if recovers; Grade 4 if permanent.',
+            'vascular_injury': 'Intraoperative vascular injury requiring surgical repair, bypass grafting, or stenting. Compartment syndrome or amputation should be reported separately. (ICD-9 997.20)',
+            'deep_periprosthetic_joint_infection': 'Deep periprosthetic joint infection diagnosed when: (1) sinus tract communicates with prosthesis, or (2) pathogen isolated from ≥2 separate tissue/fluid samples, or (3) 4 of 6 criteria met (elevated ESR + CRP, elevated synovial WBC, elevated synovial PMN%, purulence, single positive culture, or >5 neutrophils/HPF on histology at ×400). (ICD-9 996.66)<br><br>Reference: Musculoskeletal Infection Society (MSIS) / Parvizi criteria.',
+            'periprosthetic_fracture': 'Periprosthetic fracture of the distal femur, proximal tibia, or patella (knee) OR proximal femur or acetabulum (hip). Record whether intraoperative or postoperative and operative vs nonoperative treatment. (ICD-9 996.44)',
+            'bearing_surface_wear': 'Wear of the bearing surface that is symptomatic or requires reoperation/revision. (ICD-9 996.46)<br><br>Normal expected wear is NOT recorded; only symptomatic or reoperation-requiring wear.',
+            'osteolysis': 'Expansile lytic lesion adjacent to one of the implants that is ≥1 cm in any dimension or increasing in size on serial radiographs or CT scans. (ICD-9 996.45)',
+            'implant_loosening': 'Implant loosening confirmed intraoperatively OR identified radiographically as change in implant position or progressive radiolucent line at bone-cement or bone-implant interface. (ICD-9 996.41)',
+            'implant_fracture_tibial_insert_dissociation': 'Implant fracture (specific component recorded) OR dissociation of the tibial insert from the tibial baseplate (knee) / cup-liner issues are separate. (ICD-9 996.43)',
+            'abductor_muscle_disruption': 'Symptomatic abductor dysfunction not present preoperatively, associated with positive Trendelenburg sign and use of ambulatory assist (cane/crutch/walker) for limp or weakness. Record nonoperative vs operative treatment. (ICD-9 727.69)',
+            'heterotopic_ossification': 'Symptomatic heterotopic ossification at 1 year post-op associated with stiffness/reduced ROM and radiographic Brooker grade III or IV. (ICD-9 728.13)',
+            'cup_liner_dissociation': 'Dissociation of the acetabular liner from the acetabular shell. (ICD-9 996.47)',
+            'medial_collateral_ligament_injury': 'Intraoperative or early postoperative MCL injury requiring repair, reconstruction, change in prosthetic constraint, revision, or change in TKA protocol. (ICD-9 844.10)',
+            'instability': 'For Hip: Dislocation of femoral head out of acetabulum or recurrent symptomatic subluxation (record direction & treatment). For Knee: Symptomatic instability confirmed by laxity on exam per Knee Society Knee Score. (ICD-9 996.42)',
+            'malalignment': 'Symptomatic malalignment reported by patient and confirmed radiographically with coronal angular deformity >10° from mechanical axis. (No ICD-9 in original list)',
+            'stiffness': 'Limited ROM reported by patient and confirmed on exam: extension limited to ≥15° short of full extension OR flexion <90° (not applicable if preoperative arc of motion <75°). (ICD-9 719.56)',
+            'extensor_mechanism_disruption': 'Disruption of the extensor mechanism (quadriceps tendon, patellar tendon, or patella fracture). Record surgical repair performed and/or extensor lag. (ICD-9 729.65 / 727.66)',
+            'patellofemoral_dislocation': 'Dislocation of the patella from the femoral trochlea. Record direction of instability. (ICD-9 996.42)',
+            'tibiofemoral_dislocation': 'Dislocation of the tibiofemoral joint. Record direction of instability. (ICD-9 996.42)',
+            'reoperation': 'Return to the operating room related to the index procedure (reasons must be recorded). Does not include planned staged procedures.',
+            'readmission': 'Admission to hospital for any reason during the first 90 days after index procedure. Record reason and relation to index surgery. (Critical for CMS/public reporting)',
+            'revision': 'Removal or exchange of one or more of the implants (acetabular cup, liner, femoral head/stem for hip; femur, tibia, insert, patella for knee).',
+            'death': 'Death occurring for any reason during the first 90 days after index procedure. Record cause and relation to index surgery. (Grade 5 in stratification)'
+        };
+
+        // Show complication definition in modal
+        function showComplicationInfo(element) {
+            const key = element.getAttribute('data-key');
+            const label = element.getAttribute('data-label') || key;
+            const definition = complicationDefinitions[key] || 'Standardized definition from The Hip Society / The Knee Society lists. Please refer to the full publications for complete criteria.';
+
+            document.getElementById('compModalTitle').innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>${label}`;
+            
+            let html = `
+                <div class="mb-3">
+                    <span class="badge bg-primary">Official Definition</span>
+                </div>
+                <p class="mb-3">${definition}</p>
+                
+                <div class="alert alert-light border small mb-0">
+                    <strong>Registry Note:</strong> This definition supports standardized data collection for the University of Miami Hip &amp; Knee Arthroplasty Registry. 
+                    All complications are recorded with optional date of occurrence to enable time-to-event analyses and 90-day outcome reporting.
+                </div>
+            `;
+            
+            // Add stratification hint for some
+            if (['bleeding', 'wound_complication', 'neural_deficit', 'periprosthetic_fracture', 'deep_periprosthetic_joint_infection'].includes(key)) {
+                html += `<div class="mt-2 small text-muted"><i class="bi bi-info-circle"></i> This item supports severity stratification (Grade 1–5) per Hip/Knee Society guidelines for future analytics.</div>`;
+            }
+
+            document.getElementById('compModalBody').innerHTML = html;
+
+            const modalEl = document.getElementById('complicationInfoModal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+
+        // Show/hide complication date fields based on checkbox (existing functionality)
         function setupComplicationDateToggles() {
             const toggles = document.querySelectorAll('.complication-toggle');
             
@@ -427,12 +597,10 @@
                 toggle.addEventListener('change', function() {
                     if (this.checked) {
                         dateDiv.style.display = 'block';
-                        // Optional: focus the date input
                         const dateInput = dateDiv.querySelector('input[type="date"]');
                         if (dateInput) dateInput.focus();
                     } else {
                         dateDiv.style.display = 'none';
-                        // Clear the date when unchecking (optional but clean)
                         const dateInput = dateDiv.querySelector('input[type="date"]');
                         if (dateInput) dateInput.value = '';
                     }
@@ -440,9 +608,15 @@
             });
         }
 
-        // Initialize when the page loads
+        // Initialize everything on page load
         document.addEventListener('DOMContentLoaded', function() {
             setupComplicationDateToggles();
+            
+            // Optional: Initialize Bootstrap tooltips if any remain (we now use click modal instead)
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
         });
     </script>
 

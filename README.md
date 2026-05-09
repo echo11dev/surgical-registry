@@ -1,23 +1,40 @@
-# Surgical Registry App
+# University of Miami Hip & Knee Arthroplasty Registry
 
-A complete, production-ready demo web application for managing a surgical registry with patients, surgeries, and implants. Built with Flask, SQLAlchemy, SQLite, and Bootstrap 5.
+**Production-ready Flask web application** for managing a comprehensive surgical registry focused on hip and knee arthroplasty. Built for research, quality improvement, and standardized complication tracking at the University of Miami.
 
-## Features
+## Key Features (v1.1 – May 2026)
 
-- **Patients**: Full CRUD (Create, Read, Update, Delete) with search by name/MRN/phone
-- **Surgeries**: Each patient can have multiple surgeries. Record date, procedure type, surgeon, hospital, OR, duration, notes
-- **Implants**: Each surgery can have multiple implants with type, manufacturer, model, serial #, size, lot #, notes
-- **Lookup Tables**: Manage standardized dropdown values:
-  - Genders
-  - Procedure Types (11 common orthopedic/neurosurgical procedures pre-loaded)
-  - Implant Types (14 common types)
-  - Manufacturers (9 major orthopedic companies)
-  - Hospitals (8 top US hospitals)
-  - Surgeons (5 sample surgeons with specialties)
-- **Dashboard**: Statistics, recent surgeries, top procedures
-- **Relationships**: Proper one-to-many cascading deletes (delete patient → deletes surgeries → deletes implants)
-- **Sample Data**: 4 patients, 5 surgeries, 12 implants pre-seeded
-- **Modern UI**: Responsive Bootstrap 5, modals, flash messages, confirmations
+### Core Registry Functions
+- **Patients**: Full CRUD with search by name, MRN, phone. Includes demographics, BMI auto-calculation, race/ethnicity fields.
+- **Surgeries**: Detailed capture including joint (Hip/Knee), side, surgery type (Primary/Revision), procedure name auto-calculated from standardized algorithm, surgeon, hospital, notes.
+- **Implants**: Full implant tracking with master catalog lookup by reference number. Mandatory component validation for Primary THA/TKA.
+- **Research Projects**: Enroll surgeries into multiple research studies (many-to-many).
+
+### Standardized Complications Module (New in v1.1)
+Completely redesigned **Complications tab** aligned with:
+- **The Knee Society** (TKA Complications, 2013)
+- **The Hip Society** (THA Complications, 2015)
+
+**Four organized sections**:
+1. **General Complications** (common to hip & knee)
+2. **Hip-Specific Complications**
+3. **Knee-Specific Complications**
+4. **Key Outcome Events** (Reoperation, Readmission ≤90 days, Revision, Death ≤90 days – critical for public reporting)
+
+- Every item has a clickable info icon (i) that opens a modal with the **official definition** from the Hip/Knee Society papers.
+- Optional date-of-occurrence capture for time-to-event analysis.
+- Stored as structured JSON with value + date for robust querying and research exports.
+- Supports future severity stratification (Grade 1–5).
+
+This ensures our registry produces comparable, high-quality complication data for internal QI, research publications, and external benchmarking.
+
+### Other Features
+- **Lookup Tables**: Fully manageable (Hospitals, Manufacturers, Implant Types, Surgeons, Procedure Types, Research Projects).
+- **Dashboard**: Live stats including complication rate, deep infection rate, 30-day readmission rate, revision burden, and % outpatient joints.
+- **Reports**: One-click CSV exports for Patients, Surgeries, and Implants (de-identified ready for research).
+- **Implant Master Catalog**: Searchable central database of implants by catalog/reference number.
+- **Modern UI**: Bootstrap 5, responsive, modals, flash messages, confirmations.
+- **Data Integrity**: Proper cascading deletes, unique constraints on MRN and implant reference numbers.
 
 ## How to Run
 
