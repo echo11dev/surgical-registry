@@ -55,7 +55,7 @@
 <ul class="nav nav-tabs mb-3" id="surgeryTabs" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="implants-tab" data-bs-toggle="tab" data-bs-target="#implants" type="button" role="tab">
-            <img src="{{ url_for('static', filename='Catalogicon.png') }}" alt="Implants" style="height: 20px; width: auto; margin-right: 8px; vertical-align: middle;"> Implants
+            <i class="bi bi-cpu me-1"></i> Implants
         </button>
     </li>
     <li class="nav-item" role="presentation">
@@ -82,10 +82,7 @@
 
 <!-- Implants Section -->
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0 d-flex align-items-center">
-        <img src="{{ url_for('static', filename='Catalogicon.png') }}" alt="Catalog" style="height: 28px; width: auto; margin-right: 10px;">
-        Implants ({{ implants|length }})
-    </h4>
+    <h4 class="mb-0"><i class="bi bi-cpu me-2"></i>Implants ({{ implants|length }})</h4>
     <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#addImplantModal">
         <i class="bi bi-plus-circle me-2"></i>Add Implant
     </button>
@@ -373,10 +370,7 @@
                     <!-- 2. HIP-SPECIFIC COMPLICATIONS -->
                     <div class="mb-4">
                         <div class="d-flex align-items-center mb-2 pb-1 border-bottom border-primary">
-                            <h6 class="mb-0 text-primary d-flex align-items-center">
-                                <img src="{{ url_for('static', filename='THAicon.png') }}" alt="Hip" style="height: 26px; width: auto; margin-right: 10px;">
-                                Hip-Specific Complications
-                            </h6>
+                            <h6 class="mb-0 text-primary"><i class="bi bi-broadcast-pin me-2"></i>Hip-Specific Complications</h6>
                             <span class="badge bg-primary ms-auto">3 items</span>
                         </div>
                         <div class="row g-2">
@@ -413,10 +407,7 @@
                     <!-- 3. KNEE-SPECIFIC COMPLICATIONS -->
                     <div class="mb-4">
                         <div class="d-flex align-items-center mb-2 pb-1 border-bottom border-success">
-                            <h6 class="mb-0 text-success d-flex align-items-center">
-                                <img src="{{ url_for('static', filename='TKAicon.png') }}" alt="Knee" style="height: 26px; width: auto; margin-right: 10px;">
-                                Knee-Specific Complications
-                            </h6>
+                            <h6 class="mb-0 text-success"><i class="bi bi-shield-check me-2"></i>Knee-Specific Complications</h6>
                             <span class="badge bg-success ms-auto">6 items</span>
                         </div>
                         <div class="row g-2">

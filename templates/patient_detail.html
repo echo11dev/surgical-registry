@@ -75,20 +75,9 @@
             </thead>
             <tbody>
                 {% for surgery in surgeries %}
-                {% set is_reoperation_parent = surgery.id in reoperation_parent_ids and surgery.surgery_type == 'Primary' %}
-                {% set is_revised = surgery.id in revised_ids and surgery.surgery_type == 'Primary' %}
-
-                <tr class="{% if is_reoperation_parent or is_revised %}text-muted bg-light{% endif %}">
+                <tr>
                     <td>
-                        <strong>{{ surgery.surgery_date.strftime('%b %d, %Y') }}</strong><br>
-                        {% if is_reoperation_parent %}
-                            <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7rem;">Reoperation</span>
-                        {% elif is_revised %}
-                            <span class="badge bg-secondary ms-1" style="font-size: 0.7rem;">Revised</span>
-                        {% endif %}
-                        {% if surgery.revision_of_id %}
-                            <span class="badge bg-info ms-1" style="font-size: 0.7rem;">Revision</span>
-                        {% endif %}
+                        <strong>{{ surgery.surgery_date.strftime('%b %d, %Y') }}</strong>
                     </td>
                     <td>
                         {% if surgery.procedure_type %}
@@ -143,9 +132,8 @@
                 <h5 class="modal-title"><i class="bi bi-activity me-2"></i>Record New Surgery for {{ patient.full_name }}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('add_surgery') }}" id="addSurgeryForm">
+            <form method="POST" action="{{ url_for('add_surgery') }}">
                 <input type="hidden" name="patient_id" value="{{ patient.id }}">
-                <input type="hidden" name="revision_of_id" id="revision_of_id" value="">
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -431,149 +419,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // initial if any prefilled (none)
         updateCalculatedProcedure(addForm);
     }
-
-    // Populate existing arthroplasties data for revision detection + primary prevention
-    window.existingArthroplasties = [
-        {% for s in surgeries if s.joint and s.side %}
-        { 
-            id: {{ s.id }}, 
-            joint: "{{ s.joint }}", 
-            side: "{{ s.side }}", 
-            surgery_type: "{{ s.surgery_type or '' }}",
-            date: "{{ s.surgery_date.strftime('%b %d, %Y') }}" 
-        },
-        {% endfor %}
-    ];
-
-    // === Revision / Same Joint+Side Detection Logic ===
-    const surgeryForm = document.getElementById('addSurgeryForm');
-    if (surgeryForm) {
-        surgeryForm.addEventListener('submit', function(e) {
-            const jointSel = surgeryForm.querySelector('select[name="joint"]');
-            const sideSel = surgeryForm.querySelector('select[name="side"]');
-            const joint = jointSel ? jointSel.value : '';
-            const side = sideSel ? sideSel.value : '';
-
-            if (!joint || !side) return;
-
-            const existing = (window.existingArthroplasties || []).find(s => s.joint === joint && s.side === side);
-
-            if (existing) {
-                e.preventDefault();
-                showRevisionConfirmation(existing, surgeryForm);
-            }
-        });
-
-        // === Client-side Prevention: Block Primary if one already exists ===
-        const sideSelect = surgeryForm.querySelector('select[name="side"]');
-        const jointSelect = surgeryForm.querySelector('select[name="joint"]');
-        const surgeryTypeSelect = surgeryForm.querySelector('select[name="surgery_type"]');
-
-        function updatePrimaryOption() {
-            if (!sideSelect || !jointSelect || !surgeryTypeSelect) return;
-
-            const joint = jointSelect.value;
-            const side = sideSelect.value;
-
-            if (!joint || !side) {
-                // Re-enable Primary if no joint/side selected
-                const primaryOption = surgeryTypeSelect.querySelector('option[value="Primary"]');
-                if (primaryOption) primaryOption.disabled = false;
-                return;
-            }
-
-            // Check if a Primary already exists for this joint + side
-            const hasPrimary = (window.existingArthroplasties || []).some(s =>
-                s.joint === joint && s.side === side && s.surgery_type === 'Primary'
-            );
-
-            const primaryOption = surgeryTypeSelect.querySelector('option[value="Primary"]');
-            if (!primaryOption) return;
-
-            if (hasPrimary) {
-                primaryOption.disabled = true;
-
-                // If currently selected Primary, switch to Revision
-                if (surgeryTypeSelect.value === 'Primary') {
-                    surgeryTypeSelect.value = 'Revision';
-                    surgeryTypeSelect.dispatchEvent(new Event('change'));
-                }
-
-                // Show warning
-                let warning = surgeryForm.querySelector('#primary-blocked-warning');
-                if (!warning) {
-                    warning = document.createElement('div');
-                    warning.id = 'primary-blocked-warning';
-                    warning.className = 'text-danger small mt-1';
-                    warning.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>A Primary already exists for this joint and side. Only Revision is allowed.';
-                    surgeryTypeSelect.parentNode.appendChild(warning);
-                }
-            } else {
-                primaryOption.disabled = false;
-
-                // Remove warning if exists
-                const warning = surgeryForm.querySelector('#primary-blocked-warning');
-                if (warning) warning.remove();
-            }
-        }
-
-        // Attach listeners
-        if (sideSelect) sideSelect.addEventListener('change', updatePrimaryOption);
-        if (jointSelect) jointSelect.addEventListener('change', updatePrimaryOption);
-
-        // Run once on load in case values are pre-selected
-        updatePrimaryOption();
-    }
 });
-
-function showRevisionConfirmation(existingSurgery, form) {
-    let modal = document.getElementById('revisionConfirmModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'revisionConfirmModal';
-        modal.className = 'modal fade';
-        modal.innerHTML = `
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header bg-warning text-dark">
-                        <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Existing Arthroplasty Detected</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>There is already an arthroplasty recorded for the <strong><span id="confirmJointSide"></span></strong> on <strong><span id="confirmDate"></span></strong>.</p>
-                        <p class="mb-0"><strong>Did this new surgery require revision of a major component</strong> (e.g. stem, shell, tibia, femur)?</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" id="btnNoRevision">No — Minor reoperation (add as child under previous)</button>
-                        <button type="button" class="btn btn-warning" id="btnYesMajorRevision">Yes — Major revision (new independent entry)</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    }
-
-    document.getElementById('confirmJointSide').textContent = `${existingSurgery.side} ${existingSurgery.joint}`;
-    document.getElementById('confirmDate').textContent = existingSurgery.date;
-
-    const bsModal = new bootstrap.Modal(modal);
-    bsModal.show();
-
-    const yesBtn = modal.querySelector('#btnYesMajorRevision');
-    const noBtn = modal.querySelector('#btnNoRevision');
-
-    yesBtn.onclick = function() {
-        bsModal.hide();
-        form.submit(); // normal new surgery → old one gets grayed out
-    };
-
-    noBtn.onclick = function() {
-        bsModal.hide();
-        const hidden = form.querySelector('#revision_of_id');
-        if (hidden) hidden.value = existingSurgery.id;
-        form.submit(); // linked as revision of previous
-    };
-}
 </script>
 
 {% endblock %}

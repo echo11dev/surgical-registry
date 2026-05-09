@@ -140,16 +140,10 @@ class Surgery(db.Model):
     # Outpatient / Same-day discharge
     outpatient = db.Column(db.Boolean, default=False)
     
-    # Revision hierarchy support
-    revision_of_id = db.Column(db.Integer, db.ForeignKey('surgeries.id'), nullable=True)
-    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     implants = db.relationship('Implant', backref='surgery', cascade='all, delete-orphan', lazy=True)
     research_projects = db.relationship('ResearchProject', secondary='surgery_research_projects', backref='surgeries', lazy='dynamic')
-    
-    # Self-referential relationship for revisions
-    revision_of = db.relationship('Surgery', remote_side=[id], backref='revisions', lazy=True)
 
 class Implant(db.Model):
     __tablename__ = 'implants'
@@ -567,14 +561,6 @@ def get_all_lookups():
         'surgeons': Surgeon.query.order_by(Surgeon.name).all()
     }
 
-
-# Context processor to make current date available in all templates
-@app.context_processor
-def inject_current_date():
-    from datetime import date
-    return {'current_date': date.today().strftime('%B %d, %Y')}
-
-
 # ==================== ROUTES ====================
 
 @app.route('/')
@@ -732,48 +718,11 @@ def patient_detail(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     surgeries = Surgery.query.filter_by(patient_id=patient_id).order_by(Surgery.surgery_date.desc()).all()
     lookups = get_all_lookups()
-
-    # === New labeling logic ===
-    reoperation_parent_ids = set()   # Surgeries that have child revisions (show "Reoperation")
-    revised_ids = set()              # Surgeries superseded by a major independent revision (show "Revised")
-
-    # Build parent → children map
-    children_map = {}
-    for s in surgeries:
-        if s.revision_of_id:
-            if s.revision_of_id not in children_map:
-                children_map[s.revision_of_id] = []
-            children_map[s.revision_of_id].append(s.id)
-
-    # Identify parents that have children → "Reoperation" (only for Primary surgeries)
-    for parent_id in children_map:
-        parent_surgery = next((s for s in surgeries if s.id == parent_id), None)
-        if parent_surgery and parent_surgery.surgery_type == 'Primary':
-            reoperation_parent_ids.add(parent_id)
-
-    # Identify surgeries that are not the latest on their joint/side → "Revised" (only for Primary)
-    joint_side_latest = {}
-    for s in surgeries:
-        if s.surgery_type != 'Primary':
-            continue
-        key = (s.joint, s.side)
-        if key not in joint_side_latest:
-            joint_side_latest[key] = s.id
-
-    for s in surgeries:
-        if s.surgery_type != 'Primary':
-            continue
-        key = (s.joint, s.side)
-        if key in joint_side_latest and joint_side_latest[key] != s.id:
-            if s.id not in reoperation_parent_ids:
-                revised_ids.add(s.id)
-
+    
     return render_template('patient_detail.html', 
                           patient=patient, 
                           surgeries=surgeries,
-                          lookups=lookups,
-                          reoperation_parent_ids=reoperation_parent_ids,
-                          revised_ids=revised_ids)
+                          lookups=lookups)
 
 @app.route('/patients/<int:patient_id>/edit', methods=['POST'])
 def edit_patient(patient_id):
@@ -837,19 +786,6 @@ def add_surgery():
             flash('Patient, Date, Side, Joint and Surgery Type are required.', 'danger')
             return redirect(request.referrer or url_for('patients_list'))
 
-        # Prevent multiple Primary surgeries on the same joint + side
-        if surgery_type == 'Primary':
-            existing_primary = Surgery.query.filter(
-                Surgery.patient_id == patient_id,
-                Surgery.joint == joint,
-                Surgery.side == side,
-                Surgery.surgery_type == 'Primary'
-            ).first()
-            if existing_primary:
-                flash(f'A Primary {joint} arthroplasty on the {side} side already exists for this patient. '
-                      'You cannot create another Primary surgery for the same joint and side.', 'danger')
-                return redirect(request.referrer or url_for('patient_detail', patient_id=patient_id))
-
         surgery_date = datetime.strptime(surgery_date_str, '%Y-%m-%d').date()
 
         # Calculate Procedure Type (and create if new name)
@@ -858,19 +794,6 @@ def add_surgery():
             flash('Could not calculate Procedure Type. Ensure all fields (including Primary Type for Primary surgeries) are selected.', 'danger')
             return redirect(request.referrer or url_for('patients_list'))
 
-        # Auto-resolve revision_of_id: each revision surgery assumes it revises the *latest* surgery on the same side/joint
-        revision_of_id = request.form.get('revision_of_id', type=int)
-
-        if not revision_of_id and surgery_type == 'Revision':
-            # Find the most recent previous surgery on the same joint + side for this patient
-            latest_prev = Surgery.query.filter(
-                Surgery.patient_id == patient_id,
-                Surgery.joint == joint,
-                Surgery.side == side
-            ).order_by(Surgery.surgery_date.desc(), Surgery.id.desc()).first()
-            if latest_prev:
-                revision_of_id = latest_prev.id
-
         surgery = Surgery(
             patient_id=patient_id,
             surgery_date=surgery_date,
@@ -878,11 +801,12 @@ def add_surgery():
             surgeon_id=surgeon_id,
             hospital_id=hospital_id,
             notes=notes,
+            # New fields
             joint=joint,
             side=side,
             surgery_type=surgery_type,
-            revision_reason=revision_reason,
-            revision_of_id=revision_of_id
+            revision_reason=revision_reason
+            # operating_room and duration_minutes deprecated/removed from form
         )
         db.session.add(surgery)
         db.session.commit()
