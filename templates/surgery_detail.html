@@ -1,3 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}Surgery Details • Surgical Registry{% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary mb-3">
+                ← Back to Patient
+            </a>
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h4 class="card-title">
+                                {% if surgery.side %}{{ surgery.side }} {% endif %}{{ surgery.procedure_type.name if surgery.procedure_type else 'Surgical Procedure' }}
+                            </h4>
+                            <p class="text-muted mb-1">{{ surgery.surgery_date.strftime('%B %d, %Y') }}</p>
+                        </div>
+                        <div class="text-end">
+                            <a href="{{ url_for('edit_surgery', surgery_id=surgery.id) }}" class="btn btn-sm btn-outline-primary">Edit Surgery</a>
+                            <form method="POST" action="{{ url_for('delete_surgery', surgery_id=surgery.id) }}" style="display: inline;" onsubmit="return confirm('Delete this surgery and all its implants?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                    <p class="mb-1">Patient: <strong><a href="{{ url_for('patient_detail', patient_id=patient.id) }}">{{ patient.full_name }}</a> ({{ patient.mrn }})</strong></p>
+                    <p class="mb-1">Surgeon: <strong>{{ surgery.surgeon.name if surgery.surgeon else '—' }}</strong></p>
+                    <p class="mb-1">Hospital: <strong>{{ surgery.hospital.name if surgery.hospital else '—' }}</strong></p>
+                    {% if surgery.duration_minutes %}<p class="mb-1"><strong>Duration:</strong> {{ surgery.duration_minutes }} minutes</p>{% endif %}
+                    {% if surgery.notes %}<p class="mb-3"><strong>Notes:</strong> {{ surgery.notes }}</p>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" id="surgeryTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="implants-tab" data-bs-toggle="tab" data-bs-target="#implants" type="button" role="tab">Implants</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="comorbidities-tab" data-bs-toggle="tab" data-bs-target="#comorbidities" type="button" role="tab">Comorbidities</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="research-tab" data-bs-toggle="tab" data-bs-target="#research" type="button" role="tab">Research Projects</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="complications-tab" data-bs-toggle="tab" data-bs-target="#complications" type="button" role="tab">Complications</button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+
+        <!-- Implants Tab -->
+        <div class="tab-pane fade show active" id="implants" role="tabpanel">
+            <h5 class="mb-3">Implants ({{ implants|length }})</h5>
+            <a href="#" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addImplantModal">Add Implant</a>
+
+            {% if surgery.joint and (surgery.joint|lower == 'hip' or surgery.joint|lower == 'knee') %}
+                {% if missing_implants %}
+                    <div class="alert alert-warning">
+                        Missing mandatory implants for this Primary {{ surgery.joint }} surgery: <strong>{{ missing_implants | join(', ') }}</strong>
+                    </div>
+                {% else %}
+                    <div class="alert alert-success">
+                        All mandatory implants added for this Primary {{ surgery.joint }} surgery.
+                    </div>
+                {% endif %}
+            {% endif %}
+
+            {% if implants %}
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Manufacturer / Model</th>
+                            <th>Reference #</th>
+                            <th>Size / Lot</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for implant in implants %}
+                        <tr>
+                            <td>{{ implant.implant_type.name if implant.implant_type else '—' }}</td>
+                            <td>{{ implant.manufacturer.name if implant.manufacturer else '—' }}<br><small>{{ implant.model or '—' }}</small></td>
+                            <td>{{ implant.reference_number or '—' }}</td>
+                            <td>{{ implant.size or '—' }}<br><small>Lot: {{ implant.lot_number or '—' }}</small></td>
+                            <td>{{ implant.notes or '—' }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="editImplant({{ implant.id }})">Edit</button>
+                                <form method="POST" action="{{ url_for('delete_implant', implant_id=implant.id) }}" style="display: inline;" onsubmit="return confirm('Delete this implant?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="text-muted">No implants recorded for this surgery yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Comorbidities Tab -->
+        <div class="tab-pane fade" id="comorbidities" role="tabpanel">
+            <h5 class="mb-3">Elixhauser Comorbidities (van Walraven)</h5>
+            <p class="text-muted">Select Yes for each comorbidity. Score is calculated automatically.</p>
+            <form method="POST" action="{{ url_for('save_comorbidities', surgery_id=surgery.id) }}">
+                <div class="row g-3">
+                    {% set comorbidities = [
+                        ('congestive_heart_failure', 'Congestive Heart Failure', 7),
+                        ('cardiac_arrhythmia', 'Cardiac Arrhythmia', 5),
+                        ('valvular_disease', 'Valvular Disease', 3),
+                        ('pulmonary_circulation', 'Pulmonary Circulation Disorders', 6),
+                        ('peripheral_vascular', 'Peripheral Vascular Disease', 2),
+                        ('hypertension', 'Hypertension', 1),
+                        ('paralysis', 'Paralysis', 7),
+                        ('neurological_disorders', 'Neurological Disorders', 6),
+                        ('chronic_pulmonary', 'Chronic Pulmonary Disease', 3),
+                        ('diabetes', 'Diabetes (uncomplicated)', 0),
+                        ('diabetes_complications', 'Diabetes with Complications', 1),
+                        ('hypothyroidism', 'Hypothyroidism', 0),
+                        ('renal_failure', 'Renal Failure', 5),
+                        ('liver_disease', 'Liver Disease', 11),
+                        ('peptic_ulcer', 'Peptic Ulcer Disease', 0),
+                        ('aids_hiv', 'AIDS/HIV', 0),
+                        ('lymphoma', 'Lymphoma', 9),
+                        ('metastatic_cancer', 'Metastatic Cancer', 14),
+                        ('solid_tumor', 'Solid Tumor without Metastasis', 7),
+                        ('rheumatoid_arthritis', 'Rheumatoid Arthritis', 0),
+                        ('coagulopathy', 'Coagulopathy', 3),
+                        ('obesity', 'Obesity', 0),
+                        ('weight_loss', 'Weight Loss', 6),
+                        ('fluid_electrolyte', 'Fluid and Electrolyte Disorders', 5),
+                        ('blood_loss_anemia', 'Blood Loss Anemia', 3),
+                        ('deficiency_anemia', 'Deficiency Anemia', 3),
+                        ('alcohol_abuse', 'Alcohol Abuse', 0),
+                        ('drug_abuse', 'Drug Abuse', 4),
+                        ('psychoses', 'Psychoses', 5),
+                        ('depression', 'Depression', 0)
+                    ] %}
+                    {% for key, label, weight in comorbidities %}
+                    <div class="col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="{{ key }}" name="{{ key }}" value="yes"
+                                   {% if surgery.comorbidities and surgery.comorbidities.get(key) == 'yes' %}checked{% endif %}>
+                            <label class="form-check-label" for="{{ key }}">
+                                {{ label }} (+{{ weight }})
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="mt-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>Elixhauser Score (van Walraven): {{ surgery.elixhauser_score or 0 }}</strong>
+                    </div>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-save me-1"></i> Save Comorbidities
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Research Projects Tab -->
+        <div class="tab-pane fade" id="research" role="tabpanel">
+            <h5 class="mb-3">Research Projects</h5>
+            <p class="text-muted mb-3">{{ surgery.research_projects.count() }} projects assigned to this surgery</p>
+
+            {% if surgery.research_projects.count() > 0 %}
+                <ul class="list-group mb-4">
+                    {% for project in surgery.research_projects %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ project.name }}</strong>
+                            {% if project.description %}<br><small class="text-muted">{{ project.description }}</small>{% endif %}
+                        </div>
+                        <form method="POST" action="{{ url_for('remove_research_project_from_surgery', surgery_id=surgery.id, project_id=project.id) }}" onsubmit="return confirm('Remove this project from the surgery?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">No research projects assigned yet.</p>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('add_research_project_to_surgery', surgery_id=surgery.id) }}">
+                <div class="row g-2">
+                    <div class="col-md-8">
+                        <select class="form-select" name="research_project_id" required>
+                            <option value="">-- Select research project --</option>
+                            {% for rp in research_projects %}
+                            <option value="{{ rp.id }}">{{ rp.name }}{% if rp.description %} — {{ rp.description|truncate(60, True) }}{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary w-100">Add to Surgery</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
         <!-- Complications Tab -->
         <div class="tab-pane fade" id="complications" role="tabpanel">
             <h5 class="mb-3">Complications</h5>
@@ -69,20 +278,36 @@
                     </button>
                 </div>
             </form>
-        </div>{% extends "base.html" %}
+        </div>
 
-{% block title %}Surgery Details • Surgical Registry{% endblock %}
-
-{% block content %}
-
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>Surgery Details</h2>
-        <a href="{{ url_for('patient_detail', patient_id=surgery.patient_id) }}" class="btn btn-secondary">← Back to Patient</a>
     </div>
+</div>
 
-    <!-- Full clean template would go here - simplified for brevity -->
-    <div class="alert alert-info">
-        Complications tab is now clean. This is the fixed version.
-    </div>
+{% endblock %}
 
+{% block extra_js %}
+<script>
+    // Simple date toggle for complications
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggles = document.querySelectorAll('.complication-toggle');
+        toggles.forEach(toggle => {
+            const targetId = toggle.getAttribute('data-date-target');
+            if (targetId) {
+                const dateDiv = document.getElementById(targetId);
+                if (dateDiv) {
+                    if (toggle.checked) {
+                        dateDiv.style.display = 'block';
+                    }
+                    toggle.addEventListener('change', function() {
+                        if (this.checked) {
+                            dateDiv.style.display = 'block';
+                        } else {
+                            dateDiv.style.display = 'none';
+                        }
+                    });
+                }
+            }
+        });
+    });
+</script>
 {% endblock %}
