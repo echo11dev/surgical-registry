@@ -733,23 +733,47 @@ def patient_detail(patient_id):
     surgeries = Surgery.query.filter_by(patient_id=patient_id).order_by(Surgery.surgery_date.desc()).all()
     lookups = get_all_lookups()
 
-    # Identify surgeries that have been superseded by a later revision on same joint/side
-    superseded_ids = set()
-    joint_side_map = {}  # (joint, side) -> latest surgery id
+    # === New labeling logic ===
+    reoperation_parent_ids = set()   # Surgeries that have child revisions (show "Reoperation")
+    revised_ids = set()              # Surgeries superseded by a major independent revision (show "Revised")
 
-    for s in reversed(surgeries):  # oldest first
+    # Build parent → children map
+    children_map = {}
+    for s in surgeries:
+        if s.revision_of_id:
+            if s.revision_of_id not in children_map:
+                children_map[s.revision_of_id] = []
+            children_map[s.revision_of_id].append(s.id)
+
+    # Identify parents that have children → "Reoperation" (only for Primary surgeries)
+    for parent_id in children_map:
+        parent_surgery = next((s for s in surgeries if s.id == parent_id), None)
+        if parent_surgery and parent_surgery.surgery_type == 'Primary':
+            reoperation_parent_ids.add(parent_id)
+
+    # Identify surgeries that are not the latest on their joint/side → "Revised" (only for Primary)
+    joint_side_latest = {}
+    for s in surgeries:
+        if s.surgery_type != 'Primary':
+            continue
         key = (s.joint, s.side)
-        if key in joint_side_map:
-            # There is a newer surgery on same joint/side → gray out this older one
-            superseded_ids.add(s.id)
-        else:
-            joint_side_map[key] = s.id
+        if key not in joint_side_latest:
+            joint_side_latest[key] = s.id
+
+    for s in surgeries:
+        if s.surgery_type != 'Primary':
+            continue
+        key = (s.joint, s.side)
+        if key in joint_side_latest and joint_side_latest[key] != s.id:
+            if s.id not in reoperation_parent_ids:
+                revised_ids.add(s.id)
 
     return render_template('patient_detail.html', 
                           patient=patient, 
                           surgeries=surgeries,
                           lookups=lookups,
-                          superseded_ids=superseded_ids)
+                          reoperation_parent_ids=reoperation_parent_ids,
+                          revised_ids=revised_ids)
 
 @app.route('/patients/<int:patient_id>/edit', methods=['POST'])
 def edit_patient(patient_id):

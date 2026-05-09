@@ -75,14 +75,19 @@
             </thead>
             <tbody>
                 {% for surgery in surgeries %}
-                <tr class="{% if surgery.id in superseded_ids %}text-muted bg-light{% endif %}">
+                {% set is_reoperation_parent = surgery.id in reoperation_parent_ids and surgery.surgery_type == 'Primary' %}
+                {% set is_revised = surgery.id in revised_ids and surgery.surgery_type == 'Primary' %}
+
+                <tr class="{% if is_reoperation_parent or is_revised %}text-muted bg-light{% endif %}">
                     <td>
-                        <strong>{{ surgery.surgery_date.strftime('%b %d, %Y') }}</strong>
-                        {% if surgery.id in superseded_ids %}
-                            <span class="badge bg-secondary ms-1">Revised</span>
+                        <strong>{{ surgery.surgery_date.strftime('%b %d, %Y') }}</strong><br>
+                        {% if is_reoperation_parent %}
+                            <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7rem;">Reoperation</span>
+                        {% elif is_revised %}
+                            <span class="badge bg-secondary ms-1" style="font-size: 0.7rem;">Revised</span>
                         {% endif %}
                         {% if surgery.revision_of_id %}
-                            <span class="badge bg-info ms-1">Revision</span>
+                            <span class="badge bg-info ms-1" style="font-size: 0.7rem;">Revision</span>
                         {% endif %}
                     </td>
                     <td>
@@ -536,11 +541,11 @@ function showRevisionConfirmation(existingSurgery, form) {
                     </div>
                     <div class="modal-body">
                         <p>There is already an arthroplasty recorded for the <strong><span id="confirmJointSide"></span></strong> on <strong><span id="confirmDate"></span></strong>.</p>
-                        <p class="mb-0"><strong>Did this new surgery require revision of a major component</strong> (e.g. femoral stem, acetabular shell, tibial component)?</p>
+                        <p class="mb-0"><strong>Did this new surgery require revision of a major component</strong> (e.g. stem, shell, tibia, femur)?</p>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" id="btnNoRevision">No — Link as child revision of previous</button>
-                        <button type="button" class="btn btn-warning" id="btnYesMajorRevision">Yes — Major component revision (new independent entry)</button>
+                        <button type="button" class="btn btn-outline-secondary" id="btnNoRevision">No — Minor reoperation (add as child under previous)</button>
+                        <button type="button" class="btn btn-warning" id="btnYesMajorRevision">Yes — Major revision (new independent entry)</button>
                     </div>
                 </div>
             </div>
