@@ -8,6 +8,7 @@ with lookup tables for standardized data.
 import os
 import csv
 import io
+import json
 from datetime import datetime, date
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
@@ -635,6 +636,37 @@ def dashboard():
         stats['readmission_30d_rate'] = round((readmission_30d_count / total_surgeries) * 100, 1)
         stats['reoperation_rate'] = round((reoperation_count / total_surgeries) * 100, 1) if total_surgeries > 0 else 0
 
+        # Stratified Reoperation Rates (for dashboard UI and research insights)
+        # By Joint
+        hip_surgeries = sum(1 for s in all_surgeries if s.joint == 'Hip')
+        reop_hip_count = sum(
+            1 for s in all_surgeries 
+            if s.joint == 'Hip' and s.complications and s.complications.get('reoperation') == 'yes'
+        )
+        stats['reop_hip_rate'] = round((reop_hip_count / hip_surgeries * 100), 1) if hip_surgeries > 0 else 0
+
+        knee_surgeries = sum(1 for s in all_surgeries if s.joint == 'Knee')
+        reop_knee_count = sum(
+            1 for s in all_surgeries 
+            if s.joint == 'Knee' and s.complications and s.complications.get('reoperation') == 'yes'
+        )
+        stats['reop_knee_rate'] = round((reop_knee_count / knee_surgeries * 100), 1) if knee_surgeries > 0 else 0
+
+        # By Surgery Type (Primary vs Revision)
+        primary_surgeries = sum(1 for s in all_surgeries if getattr(s, 'surgery_type', None) == 'Primary')
+        reop_primary_count = sum(
+            1 for s in all_surgeries 
+            if getattr(s, 'surgery_type', None) == 'Primary' and s.complications and s.complications.get('reoperation') == 'yes'
+        )
+        stats['reop_primary_rate'] = round((reop_primary_count / primary_surgeries * 100), 1) if primary_surgeries > 0 else 0
+
+        revision_surgeries = sum(1 for s in all_surgeries if getattr(s, 'surgery_type', None) == 'Revision')
+        reop_revision_count = sum(
+            1 for s in all_surgeries 
+            if getattr(s, 'surgery_type', None) == 'Revision' and s.complications and s.complications.get('reoperation') == 'yes'
+        )
+        stats['reop_revision_rate'] = round((reop_revision_count / revision_surgeries * 100), 1) if revision_surgeries > 0 else 0
+
         # Revision Burden (% of surgeries that are revisions)
         revision_count = sum(1 for s in all_surgeries if getattr(s, 'surgery_type', None) == 'Revision')
         stats['revision_burden'] = round((revision_count / total_surgeries) * 100, 1)
@@ -652,6 +684,10 @@ def dashboard():
         stats['deep_infection_rate'] = 0
         stats['readmission_30d_rate'] = 0
         stats['reoperation_rate'] = 0
+        stats['reop_hip_rate'] = 0
+        stats['reop_knee_rate'] = 0
+        stats['reop_primary_rate'] = 0
+        stats['reop_revision_rate'] = 0
         stats['revision_burden'] = 0
         stats['outpatient_joint_percent'] = 0
     
@@ -1617,6 +1653,123 @@ def export_implants_csv():
 
     output = make_response(si.getvalue())
     output.headers["Content-Disposition"] = "attachment; filename=um_registry_implants.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
+
+
+@app.route('/reports/export/complications_dataset')
+def export_complications_dataset_csv():
+    """Export rich Complications Dataset for research & QI (one row per surgery).
+    
+    Includes:
+    - Full surgery metadata + Elixhauser score + Research Project enrollment
+    - Key complications expanded as separate Yes/No + Date columns (from Hip/Knee Society lists)
+    - Full complications JSON as string column for advanced parsing / time-to-event analysis
+    Ready for Excel, R, Python/Pandas, or statistical software.
+    """
+    si = io.StringIO()
+    cw = csv.writer(si)
+    
+    # Key complications we expand into dedicated columns (high research/QI priority)
+    # These come from the standardized Hip Society (2015) and Knee Society (2013) lists
+    key_complication_keys = [
+        'deep_periprosthetic_joint_infection',
+        'reoperation',
+        'readmission',
+        'revision',
+        'death',
+        'instability',
+        'periprosthetic_fracture',
+        'wound_complication',
+        'thromboembolic_disease',
+        'bleeding',
+        'implant_loosening',
+        'stiffness',                    # Knee-specific
+        'abductor_muscle_disruption',   # Hip-specific
+        'heterotopic_ossification',     # Hip-specific
+        'implant_fracture_tibial_insert_dissociation',
+    ]
+    
+    # Build header
+    header = [
+        'Surgery_ID', 'Surgery_Date', 'Patient_MRN', 'Patient_Name', 'Patient_Age', 'Patient_Sex',
+        'Joint', 'Side', 'Surgery_Type', 'Revision_Reason',
+        'Surgeon', 'Hospital', 'Operating_Room', 'Duration_Minutes', 'Outpatient',
+        'Procedure_Type_Standardized', 'Elixhauser_Score_van_Walraven',
+        'Research_Projects_Enrolled', 'Number_of_Implants'
+    ]
+    
+    for key in key_complication_keys:
+        header.append(f'Comp_{key}')
+        header.append(f'Comp_{key}_Date')
+    
+    header.append('Complications_Full_JSON')
+    cw.writerow(header)
+    
+    # Fetch all surgeries with eager loading for performance
+    surgeries = Surgery.query.options(
+        db.joinedload(Surgery.patient),
+        db.joinedload(Surgery.surgeon),
+        db.joinedload(Surgery.hospital),
+        db.joinedload(Surgery.procedure_type),
+        db.joinedload(Surgery.implants),
+        db.joinedload(Surgery.research_projects)
+    ).order_by(Surgery.surgery_date.desc()).all()
+    
+    for s in surgeries:
+        # Base metadata
+        row = [
+            s.id,
+            s.surgery_date.isoformat() if s.surgery_date else '',
+            s.patient.mrn if s.patient else '',
+            s.patient.full_name if s.patient else '',
+            s.patient.age if s.patient else '',
+            s.patient.sex if s.patient else '',
+            s.joint or '',
+            s.side or '',
+            s.surgery_type or '',
+            s.revision_reason or '',
+            s.surgeon.name if s.surgeon else '',
+            s.hospital.name if s.hospital else '',
+            s.operating_room or '',
+            s.duration_minutes or '',
+            'Yes' if getattr(s, 'outpatient', False) else 'No',
+            s.procedure_type.name if s.procedure_type else '',
+            s.elixhauser_score or 0,
+        ]
+        
+        # Research projects (comma-separated for easy filtering in Excel)
+        rp_names = [rp.name for rp in getattr(s, 'research_projects', [])]
+        row.append(', '.join(rp_names) if rp_names else '')
+        
+        # Number of implants
+        row.append(len(s.implants) if s.implants else 0)
+        
+        # Expand key complications + dates
+        comps = s.complications or {}
+        for key in key_complication_keys:
+            raw_val = comps.get(key, '')
+            
+            if isinstance(raw_val, dict):
+                # Future-proof for {"value": "yes", "date": "2025-..."} structure
+                value = raw_val.get('value', '')
+                date_val = raw_val.get('date', '') if value == 'yes' else ''
+            else:
+                # Current flat structure: 'yes' / 'no' / ''
+                value = raw_val if raw_val in ('yes', 'no') else ''
+                date_val = ''  # Dates not yet stored in flat model; ready for enhancement
+            
+            row.append(value)
+            row.append(date_val)
+        
+        # Full JSON for researchers who want everything (parse with json.loads)
+        full_json_str = json.dumps(comps, default=str, ensure_ascii=False) if comps else '{}'
+        row.append(full_json_str)
+        
+        cw.writerow(row)
+    
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=um_arthroplasty_complications_dataset.csv"
     output.headers["Content-type"] = "text/csv"
     return output
 
