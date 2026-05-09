@@ -140,10 +140,16 @@ class Surgery(db.Model):
     # Outpatient / Same-day discharge
     outpatient = db.Column(db.Boolean, default=False)
     
+    # Revision hierarchy support
+    revision_of_id = db.Column(db.Integer, db.ForeignKey('surgeries.id'), nullable=True)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     implants = db.relationship('Implant', backref='surgery', cascade='all, delete-orphan', lazy=True)
     research_projects = db.relationship('ResearchProject', secondary='surgery_research_projects', backref='surgeries', lazy='dynamic')
+    
+    # Self-referential relationship for revisions
+    revision_of = db.relationship('Surgery', remote_side=[id], backref='revisions', lazy=True)
 
 class Implant(db.Model):
     __tablename__ = 'implants'
@@ -726,11 +732,24 @@ def patient_detail(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     surgeries = Surgery.query.filter_by(patient_id=patient_id).order_by(Surgery.surgery_date.desc()).all()
     lookups = get_all_lookups()
-    
+
+    # Identify surgeries that have been superseded by a later revision on same joint/side
+    superseded_ids = set()
+    joint_side_map = {}  # (joint, side) -> latest surgery id
+
+    for s in reversed(surgeries):  # oldest first
+        key = (s.joint, s.side)
+        if key in joint_side_map:
+            # There is a newer surgery on same joint/side → gray out this older one
+            superseded_ids.add(s.id)
+        else:
+            joint_side_map[key] = s.id
+
     return render_template('patient_detail.html', 
                           patient=patient, 
                           surgeries=surgeries,
-                          lookups=lookups)
+                          lookups=lookups,
+                          superseded_ids=superseded_ids)
 
 @app.route('/patients/<int:patient_id>/edit', methods=['POST'])
 def edit_patient(patient_id):
@@ -802,6 +821,19 @@ def add_surgery():
             flash('Could not calculate Procedure Type. Ensure all fields (including Primary Type for Primary surgeries) are selected.', 'danger')
             return redirect(request.referrer or url_for('patients_list'))
 
+        # Auto-resolve revision_of_id: each revision surgery assumes it revises the *latest* surgery on the same side/joint
+        revision_of_id = request.form.get('revision_of_id', type=int)
+
+        if not revision_of_id and surgery_type == 'Revision':
+            # Find the most recent previous surgery on the same joint + side for this patient
+            latest_prev = Surgery.query.filter(
+                Surgery.patient_id == patient_id,
+                Surgery.joint == joint,
+                Surgery.side == side
+            ).order_by(Surgery.surgery_date.desc(), Surgery.id.desc()).first()
+            if latest_prev:
+                revision_of_id = latest_prev.id
+
         surgery = Surgery(
             patient_id=patient_id,
             surgery_date=surgery_date,
@@ -809,12 +841,11 @@ def add_surgery():
             surgeon_id=surgeon_id,
             hospital_id=hospital_id,
             notes=notes,
-            # New fields
             joint=joint,
             side=side,
             surgery_type=surgery_type,
-            revision_reason=revision_reason
-            # operating_room and duration_minutes deprecated/removed from form
+            revision_reason=revision_reason,
+            revision_of_id=revision_of_id
         )
         db.session.add(surgery)
         db.session.commit()
