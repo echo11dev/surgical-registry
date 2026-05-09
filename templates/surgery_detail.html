@@ -660,6 +660,80 @@
 
 </div> <!-- End tab-content -->
 
+<!-- Comorbidities Modal (kept for backward compatibility if needed) -->
+<div class="modal fade" id="comorbiditiesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-heart-pulse me-2"></i>Elixhauser Comorbidities (van Walraven)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('save_comorbidities', surgery_id=surgery.id) }}">
+                <div class="modal-body">
+                    <p class="text-muted small">Select "Yes" for each comorbidity the patient has. The score is calculated automatically using van Walraven weights.</p>
+                    
+                    <div class="row g-2">
+                        {% set comorbidities = [
+                            ('congestive_heart_failure', 'Congestive Heart Failure', 7),
+                            ('cardiac_arrhythmia', 'Cardiac Arrhythmia', 5),
+                            ('valvular_disease', 'Valvular Disease', 3),
+                            ('pulmonary_circulation', 'Pulmonary Circulation Disorders', 6),
+                            ('peripheral_vascular', 'Peripheral Vascular Disease', 2),
+                            ('hypertension', 'Hypertension', 1),
+                            ('paralysis', 'Paralysis', 7),
+                            ('neurological_disorders', 'Neurological Disorders', 6),
+                            ('chronic_pulmonary', 'Chronic Pulmonary Disease', 3),
+                            ('diabetes', 'Diabetes (uncomplicated)', 0),
+                            ('diabetes_complications', 'Diabetes with Complications', 1),
+                            ('hypothyroidism', 'Hypothyroidism', 0),
+                            ('renal_failure', 'Renal Failure', 5),
+                            ('liver_disease', 'Liver Disease', 11),
+                            ('peptic_ulcer', 'Peptic Ulcer Disease', 0),
+                            ('aids_hiv', 'AIDS/HIV', 0),
+                            ('lymphoma', 'Lymphoma', 9),
+                            ('metastatic_cancer', 'Metastatic Cancer', 14),
+                            ('solid_tumor', 'Solid Tumor without Metastasis', 7),
+                            ('rheumatoid_arthritis', 'Rheumatoid Arthritis', 0),
+                            ('coagulopathy', 'Coagulopathy', 3),
+                            ('obesity', 'Obesity', 0),
+                            ('weight_loss', 'Weight Loss', 6),
+                            ('fluid_electrolyte', 'Fluid and Electrolyte Disorders', 5),
+                            ('blood_loss_anemia', 'Blood Loss Anemia', 3),
+                            ('deficiency_anemia', 'Deficiency Anemia', 3),
+                            ('alcohol_abuse', 'Alcohol Abuse', 0),
+                            ('drug_abuse', 'Drug Abuse', 4),
+                            ('psychoses', 'Psychoses', 5),
+                            ('depression', 'Depression', 0)
+                        ] %}
+                        
+                        {% for key, label, weight in comorbidities %}
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="{{ key }}" name="{{ key }}" value="yes"
+                                       {% if surgery.comorbidities and surgery.comorbidities.get(key) == 'yes' %}checked{% endif %}>
+                                <label class="form-check-label" for="{{ key }}">
+                                    {{ label }} <span class="text-muted small">(+{{ weight }})</span>
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <hr>
+                    <div class="alert alert-light">
+                        <strong>Elixhauser Score (van Walraven):</strong> 
+                        <span id="elixhauser_score" class="fs-4 fw-bold text-primary">{{ surgery.elixhauser_score or 0 }}</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info">Save Comorbidities</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Add Implant Modal with Catalog Search -->
 <div class="modal fade" id="addImplantModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -671,6 +745,7 @@
             <form method="POST" action="{{ url_for('add_implant') }}" id="addImplantForm">
                 <input type="hidden" name="surgery_id" value="{{ surgery.id }}">
                 <div class="modal-body">
+                    
                     <!-- Search by Reference Number -->
                     <div class="mb-3">
                         <label class="form-label"><strong>Search Implant Catalog</strong></label>
@@ -692,6 +767,7 @@
                     <hr>
                     
                     <div class="row g-3">
+                        <!-- Reference Number with Search -->
                         <div class="col-12">
                             <label class="form-label"><strong>Implant Reference / Catalog Number</strong> <span class="text-danger">*</span></label>
                             <div class="input-group">
@@ -701,6 +777,12 @@
                                 </button>
                             </div>
                             <small class="text-muted">Enter or search the reference number — all other details will auto-populate</small>
+                        </div>
+                        
+                        <!-- Search Results -->
+                        <div id="searchResults" class="col-12" style="display: none;">
+                            <label class="form-label small">Search Results (click to select):</label>
+                            <div id="searchResultsList" class="list-group" style="max-height: 120px; overflow-y: auto;"></div>
                         </div>
                         
                         <hr class="my-2">
@@ -750,6 +832,61 @@
 </div>
 
 <script>
+// Elixhauser van Walraven Score Calculation
+function calculateElixhauserScore() {
+    const weights = {
+        'congestive_heart_failure': 7,
+        'cardiac_arrhythmia': 5,
+        'valvular_disease': 3,
+        'pulmonary_circulation': 6,
+        'peripheral_vascular': 2,
+        'hypertension': 1,
+        'paralysis': 7,
+        'neurological_disorders': 6,
+        'chronic_pulmonary': 3,
+        'diabetes': 0,
+        'diabetes_complications': 1,
+        'hypothyroidism': 0,
+        'renal_failure': 5,
+        'liver_disease': 11,
+        'peptic_ulcer': 0,
+        'aids_hiv': 0,
+        'lymphoma': 9,
+        'metastatic_cancer': 14,
+        'solid_tumor': 7,
+        'rheumatoid_arthritis': 0,
+        'coagulopathy': 3,
+        'obesity': 0,
+        'weight_loss': 6,
+        'fluid_electrolyte': 5,
+        'blood_loss_anemia': 3,
+        'deficiency_anemia': 3,
+        'alcohol_abuse': 0,
+        'drug_abuse': 4,
+        'psychoses': 5,
+        'depression': 0
+    };
+    
+    let score = 0;
+    Object.keys(weights).forEach(key => {
+        const checkbox = document.getElementById(key);
+        if (checkbox && checkbox.checked) {
+            score += weights[key];
+        }
+    });
+    
+    const scoreElement = document.getElementById('elixhauser_score');
+    if (scoreElement) scoreElement.textContent = score;
+}
+
+// Attach listeners to all comorbidity checkboxes
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('#comorbiditiesModal input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', calculateElixhauserScore);
+    });
+});
+
 // Implant Catalog Search + Auto-fill
 function searchImplantCatalog() {
     const query = document.getElementById('implantSearch').value.trim();
@@ -794,19 +931,23 @@ function searchImplantCatalog() {
 }
 
 function selectImplantFromCatalog(item) {
+    // Auto-fill hidden fields + display fields
     document.getElementById('reference_number').value = item.catalog_number || '';
     document.getElementById('implant_type_id').value = item.implant_type_id || '';
     document.getElementById('manufacturer_id').value = item.manufacturer_id || '';
     document.getElementById('model').value = item.model || '';
     document.getElementById('size').value = item.size || '';
     
+    // Update display fields (read-only)
     document.getElementById('implant_type_display').value = item.implant_type || '';
     document.getElementById('manufacturer_display').value = item.manufacturer || '';
     document.getElementById('model_display').value = item.model || (item.design ? item.design : '');
     document.getElementById('size_display').value = item.size || '';
     
+    // Hide search results
     document.getElementById('searchResults').style.display = 'none';
     
+    // Show success toast
     const toast = document.createElement('div');
     toast.className = 'alert alert-success py-1 px-2 mt-2 mb-0';
     toast.style.fontSize = '0.85rem';
@@ -815,7 +956,402 @@ function selectImplantFromCatalog(item) {
     setTimeout(() => toast.remove(), 3000);
 }
 
-// ... (keep the rest of the JS from the original file)
+// Allow Enter key to trigger search
+document.getElementById('implantSearch')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        searchImplantCatalog();
+    }
+});
+
+// Bonus: Auto-search when user types 5+ characters in Reference Number field
+let searchTimeout;
+const refInput = document.getElementById('reference_number');
+if (refInput) {
+    refInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const val = this.value.trim();
+        if (val.length >= 5) {
+            searchTimeout = setTimeout(() => {
+                // Try exact match first
+                const joint = "{{ surgery.joint or '' }}";
+                fetch(`/api/implant-catalog/search?q=${encodeURIComponent(val)}&joint=${encodeURIComponent(joint)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const exact = data.find(d => d.catalog_number.toUpperCase() === val.toUpperCase());
+                        if (exact) {
+                            selectImplantFromCatalog(exact);
+                        }
+                    });
+            }, 600);
+        }
+    });
+}
+
+// === New: Lookup catalog number for structured component and auto-populate + add ===
+function lookupComponent(key, implantTypeName) {
+    const catInput = document.getElementById('cat_' + key);
+    const statusEl = document.getElementById('status_' + key);
+    if (!catInput || !catInput.value.trim()) {
+        if (statusEl) statusEl.innerHTML = '<span class="text-danger">Please enter a catalog number</span>';
+        return;
+    }
+
+    const query = catInput.value.trim();
+    const joint = "{{ surgery.joint or '' }}";
+
+    if (statusEl) statusEl.innerHTML = 'Searching Implant Master...';
+
+    fetch(`/api/implant-catalog/search?q=${encodeURIComponent(query)}&joint=${encodeURIComponent(joint)}`)
+        .then(r => r.json())
+        .then(data => {
+            // Try exact match first
+            let match = data.find(d => d.catalog_number.toUpperCase() === query.toUpperCase());
+            if (!match && data.length > 0) {
+                match = data[0]; // fallback to first result
+            }
+
+            if (!match) {
+                if (statusEl) statusEl.innerHTML = '<span class="text-danger">No matching implant found in Master Catalog</span>';
+                return;
+            }
+
+            // Autopopulate fields
+            const mfrInput = document.getElementById('mfr_' + key);
+            const sizeInput = document.getElementById('size_' + key);
+
+            if (mfrInput) mfrInput.value = match.manufacturer_name || match.manufacturer || '';
+            if (sizeInput) sizeInput.value = match.size || '';
+
+            // Store full data for adding
+            catInput.dataset.selected = JSON.stringify(match);
+            catInput.dataset.implantTypeName = implantTypeName;
+
+            if (statusEl) {
+                statusEl.innerHTML = `<span class="text-success">Found: ${match.manufacturer_name || ''} — ${match.model || ''} (Size: ${match.size || '—'})</span>`;
+            }
+
+            // Automatically add it after successful lookup (user can still edit if needed before adding)
+            setTimeout(() => {
+                addComponentFromLookup(key, implantTypeName, match);
+            }, 800);
+        })
+        .catch(err => {
+            console.error(err);
+            if (statusEl) statusEl.innerHTML = '<span class="text-danger">Error looking up catalog</span>';
+        });
+}
+
+function addComponentFromLookup(key, implantTypeName, catalogItem) {
+    const statusEl = document.getElementById('status_' + key);
+    const surgeryId = "{{ surgery.id }}";
+
+    // Prepare form data using data from Implant Master
+    const formData = new FormData();
+    formData.append('surgery_id', surgeryId);
+    formData.append('reference_number', catalogItem.catalog_number);
+    formData.append('model', catalogItem.model || '');
+    formData.append('size', catalogItem.size || '');
+    formData.append('lot_number', ''); // can be edited later
+    formData.append('notes', '');
+
+    if (catalogItem.implant_type_id) {
+        formData.append('implant_type_id', catalogItem.implant_type_id);
+    }
+    if (catalogItem.manufacturer_id) {
+        formData.append('manufacturer_id', catalogItem.manufacturer_id);
+    }
+
+    if (statusEl) statusEl.innerHTML = 'Adding to surgery...';
+
+    fetch("{{ url_for('add_implant') }}", {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.redirected) {
+            window.location.href = response.url; // success redirect
+        } else {
+            return response.text();
+        }
+    })
+    .then(() => {
+        if (statusEl) statusEl.innerHTML = '<span class="text-success">Added successfully! Reloading...</span>';
+        setTimeout(() => location.reload(), 800);
+    })
+    .catch(err => {
+        console.error(err);
+        if (statusEl) statusEl.innerHTML = '<span class="text-danger">Error adding implant. Please use the modal instead.</span>';
+    });
+}
+
+
+function toggleRevisionReasonEdit(select) {
+    const group = document.getElementById('revision_reason_edit_group');
+    if (group) {
+        group.style.display = (select.value === 'Revision') ? 'block' : 'none';
+    }
+}
+
+function togglePrimaryTypeEdit(surgeryId, select) {
+    const group = document.getElementById('primary_type_edit_group_' + surgeryId);
+    if (!group) return;
+    const primarySel = group.querySelector('select[name="primary_type"]');
+    if (select.value === 'Primary') {
+        group.style.display = 'block';
+    } else {
+        group.style.display = 'none';
+        if (primarySel) primarySel.value = '';
+    }
+    updateCalculatedProcedureEdit(surgeryId, select);
+}
+
+function updateCalculatedProcedureEdit(surgeryId, el) {
+    const form = el ? el.closest('form') : null;
+    if (!form) return;
+    const display = document.getElementById('calc_procedure_type_edit_' + surgeryId);
+    if (!display) return;
+
+    const side = form.querySelector('select[name="side"]')?.value || '';
+    const joint = form.querySelector('select[name="joint"]')?.value || '';
+    const surgeryType = form.querySelector('select[name="surgery_type"]')?.value || '';
+    const primaryGroup = document.getElementById('primary_type_edit_group_' + surgeryId);
+    const primarySel = primaryGroup ? primaryGroup.querySelector('select[name="primary_type"]') : null;
+    const isPrimaryVisible = primaryGroup && primaryGroup.style.display !== 'none';
+    const primaryType = (primarySel && isPrimaryVisible) ? primarySel.value : '';
+
+    let procName = display.textContent || '—';
+    if (side && joint && surgeryType) {
+        if (surgeryType === 'Primary' && primaryType) {
+            if (joint === 'Hip' && primaryType === 'Total') procName = `${side} Total Hip Arthroplasty`;
+            else if (joint === 'Knee' && primaryType === 'Total') procName = `${side} Total Knee Arthroplasty`;
+            else if (joint === 'Hip' && primaryType === 'Partial') procName = `${side} Hip Hemiarthroplasty`;
+            else if (joint === 'Knee' && primaryType === 'Partial') procName = `${side} Unicompartmental Knee Arthroplasty`;
+        } else if (surgeryType === 'Revision') {
+            procName = `${side} Revision ${joint} Arthroplasty`;
+        }
+    }
+    display.textContent = procName;
+}
+
+// Open Add Implant modal pre-selected for a specific component type (used by structured Primary Hip/Knee entry)
+function openAddImplantForComponent(implantTypeName) {
+    const modalEl = document.getElementById('addImplantModal');
+    if (!modalEl) return;
+
+    const modal = new bootstrap.Modal(modalEl);
+    
+    // Open modal first
+    modal.show();
+
+    // After modal is shown, try to pre-select the correct implant type
+    modalEl.addEventListener('shown.bs.modal', function handler() {
+        modalEl.removeEventListener('shown.bs.modal', handler);
+        
+        const typeSelect = document.getElementById('implant_type_id') || 
+                          modalEl.querySelector('select[name="implant_type_id"]');
+        
+        if (typeSelect) {
+            // Find option by exact text match first
+            let found = false;
+            for (let i = 0; i < typeSelect.options.length; i++) {
+                if (typeSelect.options[i].text.trim() === implantTypeName) {
+                    typeSelect.selectedIndex = i;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                // Fallback 1: partial match on last word (e.g. "Femoral Component")
+                const lastWord = implantTypeName.split(' ').pop().toLowerCase();
+                for (let i = 0; i < typeSelect.options.length; i++) {
+                    if (typeSelect.options[i].text.toLowerCase().includes(lastWord)) {
+                        typeSelect.selectedIndex = i;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (!found) {
+                // Fallback 2: match on any word
+                const words = implantTypeName.toLowerCase().split(' ');
+                for (let i = 0; i < typeSelect.options.length; i++) {
+                    const optText = typeSelect.options[i].text.toLowerCase();
+                    if (words.some(w => optText.includes(w))) {
+                        typeSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Focus the search input
+        const searchInput = document.getElementById('implantSearch');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+        }
+    }, { once: true });
+}
 </script>
+
+<!-- Edit Surgery Modal -->
+<div class="modal fade" id="editSurgeryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Surgery Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('edit_surgery', surgery_id=surgery.id) }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Surgery Date</label>
+                            <input type="date" name="surgery_date" class="form-control" value="{{ surgery.surgery_date.isoformat() }}" required>
+                        </div>
+                        <!-- Calculated Procedure Type -->
+                        <div class="col-md-6">
+                            <label class="form-label">Procedure Type</label>
+                            <div id="calc_procedure_type_edit_{{ surgery.id }}" class="form-control-plaintext border rounded px-2 py-1 bg-light text-muted">{{ surgery.procedure_type.name if surgery.procedure_type else '—' }}</div>
+                        </div>
+                        
+                        <!-- Ortho fields: Side before Joint (swapped) -->
+                        <div class="col-md-3">
+                            <label class="form-label">Side</label>
+                            <select name="side" class="form-select" onchange="updateCalculatedProcedureEdit({{ surgery.id }}, this)">
+                                <option value="">—</option>
+                                <option value="Left" {% if surgery.side == 'Left' %}selected{% endif %}>Left</option>
+                                <option value="Right" {% if surgery.side == 'Right' %}selected{% endif %}>Right</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Joint</label>
+                            <select name="joint" class="form-select" onchange="updateCalculatedProcedureEdit({{ surgery.id }}, this)">
+                                <option value="">—</option>
+                                <option value="Hip" {% if surgery.joint == 'Hip' %}selected{% endif %}>Hip</option>
+                                <option value="Knee" {% if surgery.joint == 'Knee' %}selected{% endif %}>Knee</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Surgery Type</label>
+                            <select name="surgery_type" class="form-select" onchange="toggleRevisionReasonEdit(this); togglePrimaryTypeEdit({{ surgery.id }}, this); updateCalculatedProcedureEdit({{ surgery.id }}, this)">
+                                <option value="">—</option>
+                                <option value="Primary" {% if surgery.surgery_type == 'Primary' %}selected{% endif %}>Primary</option>
+                                <option value="Revision" {% if surgery.surgery_type == 'Revision' %}selected{% endif %}>Revision</option>
+                            </select>
+                        </div>
+                        <!-- Primary Type for Primary surgeries -->
+                        <div class="col-md-3" id="primary_type_edit_group_{{ surgery.id }}" style="display: {% if surgery.surgery_type == 'Primary' %}block{% else %}none{% endif %};">
+                            <label class="form-label">Primary Type</label>
+                            <select name="primary_type" class="form-select" onchange="updateCalculatedProcedureEdit({{ surgery.id }}, this)">
+                                <option value="">—</option>
+                                <option value="Total">Total</option>
+                                <option value="Partial">Partial</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3" id="revision_reason_edit_group" style="display: {% if surgery.surgery_type == 'Revision' %}block{% else %}none{% endif %};">
+                            <label class="form-label">Revision Reason</label>
+                            <select name="revision_reason" class="form-select">
+                                <option value="">—</option>
+                                <option value="Aseptic" {% if surgery.revision_reason == 'Aseptic' %}selected{% endif %}>Aseptic Loosening</option>
+                                <option value="Infected" {% if surgery.revision_reason == 'Infected' %}selected{% endif %}>Periprosthetic Joint Infection</option>
+                                <option value="Fracture" {% if surgery.revision_reason == 'Fracture' %}selected{% endif %}>Periprosthetic Fracture</option>
+                                <option value="Instability" {% if surgery.revision_reason == 'Instability' %}selected{% endif %}>Instability</option>
+                                <option value="Other" {% if surgery.revision_reason == 'Other' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Surgeon</label>
+                            <select name="surgeon_id" class="form-select">
+                                <option value="">—</option>
+                                {% for s in lookups.surgeons %}
+                                <option value="{{ s.id }}" {% if surgery.surgeon_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Hospital</label>
+                            <select name="hospital_id" class="form-select">
+                                <option value="">—</option>
+                                {% for h in lookups.hospitals %}
+                                <option value="{{ h.id }}" {% if surgery.hospital_id == h.id %}selected{% endif %}>{{ h.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notes</label>
+                            <textarea name="notes" class="form-control" rows="2">{{ surgery.notes or '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Implant Modals -->
+{% for implant in implants %}
+<div class="modal fade" id="editImplantModal{{ implant.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">Edit Implant</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('edit_implant', implant_id=implant.id) }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Implant Type</label>
+                            <select name="implant_type_id" class="form-select" required>
+                                {% for it in lookups.implant_types %}
+                                <option value="{{ it.id }}" {% if implant.implant_type_id == it.id %}selected{% endif %}>{{ it.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Manufacturer</label>
+                            <select name="manufacturer_id" class="form-select" required>
+                                {% for m in lookups.manufacturers %}
+                                <option value="{{ m.id }}" {% if implant.manufacturer_id == m.id %}selected{% endif %}>{{ m.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Model</label>
+                            <input type="text" name="model" class="form-control" value="{{ implant.model or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Serial Number</label>
+                            <input type="text" name="serial_number" class="form-control" value="{{ implant.serial_number or '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Size</label>
+                            <input type="text" name="size" class="form-control" value="{{ implant.size or '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Lot Number</label>
+                            <input type="text" name="lot_number" class="form-control" value="{{ implant.lot_number or '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Notes</label>
+                            <input type="text" name="notes" class="form-control" value="{{ implant.notes or '' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
 
 {% endblock %}
