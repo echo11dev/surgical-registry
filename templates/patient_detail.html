@@ -1,1 +1,425 @@
-FULL
+{% extends "base.html" %}
+
+{% block title %}{{ patient.full_name }} • Surgical Registry{% endblock %}
+
+{% block content %}
+<!-- Patient Header -->
+<div class="card mb-4 border-0 shadow-sm">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                     style="width: 80px; height: 80px; font-size: 2rem; font-weight: 700;">
+                    {{ patient.first_name[0] }}{{ patient.last_name[0] }}
+                </div>
+            </div>
+            <div class="col">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h2 class="h3 mb-1">{{ patient.full_name }}</h2>
+                        <div class="d-flex align-items-center gap-3 text-muted">
+                            <span><i class="bi bi-card-text me-1"></i> {{ patient.mrn }}</span>
+                            <span><i class="bi bi-calendar me-1"></i> {{ patient.dob.strftime('%B %d, %Y') }} ({{ patient.age }} yrs)</span>
+                            {% if patient.sex == 'Male' %}
+                            <span><i class="bi bi-gender-male text-primary me-1"></i> Male</span>
+                            {% elif patient.sex == 'Female' %}
+                            <span><i class="bi bi-gender-female text-danger me-1"></i> Female</span>
+                            {% else %}
+                            <span><i class="bi bi-gender-ambiguous me-1"></i> {{ patient.sex or '—' }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <button class="btn btn-outline-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#editPatientModal">
+                            <i class="bi bi-pencil me-1"></i> Edit
+                        </button>
+                        <form id="deletePatientForm" action="{{ url_for('delete_patient', patient_id=patient.id) }}" method="POST" class="d-inline">
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete('deletePatientForm', 'patient and all their surgeries/implants')">
+                                <i class="bi bi-trash me-1"></i> Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% if patient.phone or patient.email %}
+                <div class="mt-2 small text-muted">
+                    {% if patient.phone %}<span class="me-3"><i class="bi bi-telephone"></i> {{ patient.phone }}</span>{% endif %}
+                    {% if patient.email %}<span><i class="bi bi-envelope"></i> {{ patient.email }}</span>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Surgeries Section -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-activity me-2"></i>Surgeries ({{ surgeries|length }})</h4>
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addSurgeryModal">
+        <i class="bi bi-plus-circle me-2"></i>Record New Surgery
+    </button>
+</div>
+
+{% if surgeries %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Procedure</th>
+                    <th>Surgeon</th>
+                    <th>Hospital</th>
+                    <th>Implants</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for surgery in surgeries %}
+                <tr>
+                    <td>
+                        <strong>{{ surgery.surgery_date.strftime('%b %d, %Y') }}</strong>
+                    </td>
+                    <td>
+                        {% if surgery.procedure_type %}
+                            <span class="badge badge-procedure">
+                                {% if surgery.side %}{{ surgery.side }} {% endif %}{{ surgery.procedure_type.name }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ surgery.surgeon.name if surgery.surgeon else '—' }}</td>
+                    <td>{{ surgery.hospital.name if surgery.hospital else '—' }}</td>
+                    <td>
+                        <span class="badge bg-light text-dark border">{{ surgery.implants|length }} implant{% if surgery.implants|length != 1 %}s{% endif %}</span>
+                    </td>
+                    <td class="text-end">
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('surgery_detail', surgery_id=surgery.id) }}" class="btn btn-primary">
+                                <i class="bi bi-eye me-1"></i> View
+                            </a>
+                            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editSurgeryModal{{ surgery.id }}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form id="deleteSurgery{{ surgery.id }}" action="{{ url_for('delete_surgery', surgery_id=surgery.id) }}" method="POST" class="d-inline">
+                                <button type="button" class="btn btn-outline-danger" onclick="confirmDelete('deleteSurgery{{ surgery.id }}', 'surgery and its implants')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-activity text-muted" style="font-size: 4rem;"></i>
+        <h5 class="mt-3">No surgeries recorded</h5>
+        <p class="text-muted">Click "Record New Surgery" to add the first procedure for this patient.</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Add Surgery Modal -->
+<div class="modal fade" id="addSurgeryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-activity me-2"></i>Record New Surgery for {{ patient.full_name }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_surgery') }}">
+                <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Surgery Date <span class="text-danger">*</span></label>
+                            <input type="date" name="surgery_date" class="form-control" value="{{ '2026-05-03' }}" required>
+                        </div>
+                        <!-- Calculated Procedure Type (no dropdown, auto from Side + Joint + Surgery Type + Primary Type) -->
+                        <div class="col-md-6">
+                            <label class="form-label">Procedure Type</label>
+                            <div id="calc_procedure_type" class="form-control-plaintext border rounded px-2 py-1 bg-light text-muted">Select Side, Joint, Surgery Type &amp; Primary Type (if Primary) to calculate</div>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <!-- Switched: Side before Joint -->
+                        <div class="col-md-3">
+                            <label class="form-label">Side <span class="text-danger">*</span></label>
+                            <select name="side" class="form-select" required onchange="updateCalculatedProcedure(this.closest('form'))">
+                                <option value="">Select...</option>
+                                <option value="Left">Left</option>
+                                <option value="Right">Right</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Joint <span class="text-danger">*</span></label>
+                            <select name="joint" class="form-select" required onchange="updateCalculatedProcedure(this.closest('form'))">
+                                <option value="">Select...</option>
+                                <option value="Hip">Hip</option>
+                                <option value="Knee">Knee</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Surgery Type <span class="text-danger">*</span></label>
+                            <select name="surgery_type" class="form-select" required onchange="toggleRevisionReason(this); togglePrimaryType(this); updateCalculatedProcedure(this.closest('form'))">
+                                <option value="">Select...</option>
+                                <option value="Primary">Primary</option>
+                                <option value="Revision">Revision</option>
+                            </select>
+                        </div>
+                        <!-- Primary Type shown only for Primary -->
+                        <div class="col-md-3" id="primary_type_group" style="display: none;">
+                            <label class="form-label">Primary Type <span class="text-danger">*</span></label>
+                            <select name="primary_type" class="form-select" onchange="updateCalculatedProcedure(this.closest('form'))">
+                                <option value="">Select...</option>
+                                <option value="Total">Total</option>
+                                <option value="Partial">Partial</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3" id="revision_reason_group" style="display: none;">
+                            <label class="form-label">Revision Reason</label>
+                            <select name="revision_reason" class="form-select">
+                                <option value="">Select...</option>
+                                <option value="Aseptic">Aseptic Loosening</option>
+                                <option value="Infected">Periprosthetic Joint Infection</option>
+                                <option value="Fracture">Periprosthetic Fracture</option>
+                                <option value="Instability">Instability</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Surgeon</label>
+                            <select name="surgeon_id" class="form-select">
+                                <option value="">Select surgeon...</option>
+                                {% for s in lookups.surgeons %}
+                                <option value="{{ s.id }}">{{ s.name }} ({{ s.specialty or '—' }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Hospital</label>
+                            <select name="hospital_id" class="form-select">
+                                <option value="">Select hospital...</option>
+                                {% for h in lookups.hospitals %}
+                                <option value="{{ h.id }}">{{ h.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Notes</label>
+                            <input type="text" name="notes" class="form-control" placeholder="Key observations...">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Record Surgery</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Patient Modal (reused from list) -->
+<div class="modal fade" id="editPatientModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Patient Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('edit_patient', patient_id=patient.id) }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">MRN</label>
+                            <input type="text" name="mrn" class="form-control" value="{{ patient.mrn }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Date of Birth</label>
+                            <input type="date" name="dob" class="form-control" value="{{ patient.dob.isoformat() }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">First Name</label>
+                            <input type="text" name="first_name" class="form-control" value="{{ patient.first_name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" name="last_name" class="form-control" value="{{ patient.last_name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Sex</label>
+                            <select name="sex" class="form-select" required>
+                                <option value="Male" {% if patient.sex == 'Male' %}selected{% endif %}>Male</option>
+                                <option value="Female" {% if patient.sex == 'Female' %}selected{% endif %}>Female</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone</label>
+                            <input type="tel" name="phone" class="form-control" value="{{ patient.phone or '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" value="{{ patient.email or '' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Surgery Modals -->
+{% for surgery in surgeries %}
+<div class="modal fade" id="editSurgeryModal{{ surgery.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Surgery • {{ surgery.surgery_date.strftime('%b %d, %Y') }}{% if surgery.side %} ({{ surgery.side }}){% endif %}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('edit_surgery', surgery_id=surgery.id) }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Surgery Date</label>
+                            <input type="date" name="surgery_date" class="form-control" value="{{ surgery.surgery_date.isoformat() }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Procedure Type</label>
+                            <select name="procedure_type_id" class="form-select" required>
+                                {% for pt in lookups.procedure_types %}
+                                <option value="{{ pt.id }}" {% if surgery.procedure_type_id == pt.id %}selected{% endif %}>{{ pt.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Surgeon</label>
+                            <select name="surgeon_id" class="form-select">
+                                <option value="">—</option>
+                                {% for s in lookups.surgeons %}
+                                <option value="{{ s.id }}" {% if surgery.surgeon_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Hospital</label>
+                            <select name="hospital_id" class="form-select">
+                                <option value="">—</option>
+                                {% for h in lookups.hospitals %}
+                                <option value="{{ h.id }}" {% if surgery.hospital_id == h.id %}selected{% endif %}>{{ h.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Duration (min)</label>
+                            <input type="number" name="duration_minutes" class="form-control" value="{{ surgery.duration_minutes or '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Notes</label>
+                            <input type="text" name="notes" class="form-control" value="{{ surgery.notes or '' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+function toggleRevisionReason(select) {
+    // Support both add form and edit modals
+    const form = select.closest('form');
+    let group = form ? form.querySelector('#revision_reason_group, #revision_reason_edit_group') : document.getElementById('revision_reason_group');
+    if (group) {
+        group.style.display = (select.value === 'Revision') ? 'block' : 'none';
+    }
+}
+
+function togglePrimaryType(select) {
+    const form = select.closest('form');
+    if (!form) return;
+    const group = form.querySelector('#primary_type_group');
+    if (!group) return;
+    const primarySel = group.querySelector('select[name="primary_type"]');
+    if (select.value === 'Primary') {
+        group.style.display = '';
+        if (primarySel) primarySel.required = true;
+    } else {
+        group.style.display = 'none';
+        if (primarySel) {
+            primarySel.required = false;
+            primarySel.value = '';
+        }
+    }
+    updateCalculatedProcedure(form);
+}
+
+function updateCalculatedProcedure(form) {
+    if (!form) return;
+    const display = form.querySelector('#calc_procedure_type');
+    if (!display) return;
+
+    const sideSel = form.querySelector('select[name="side"]');
+    const jointSel = form.querySelector('select[name="joint"]');
+    const surgerySel = form.querySelector('select[name="surgery_type"]');
+    const primaryGroup = form.querySelector('#primary_type_group');
+    const primarySel = primaryGroup ? primaryGroup.querySelector('select[name="primary_type"]') : null;
+
+    const side = sideSel ? sideSel.value : '';
+    const joint = jointSel ? jointSel.value : '';
+    const surgeryType = surgerySel ? surgerySel.value : '';
+    const isPrimaryVisible = primaryGroup && primaryGroup.style.display !== 'none';
+    const primaryType = (primarySel && isPrimaryVisible) ? primarySel.value : '';
+
+    let procName = 'Select Side, Joint, Surgery Type';
+    if (side && joint && surgeryType) {
+        if (surgeryType === 'Primary') {
+            if (primaryType === 'Total') {
+                if (joint === 'Hip') procName = `${side} Total Hip Arthroplasty`;
+                else if (joint === 'Knee') procName = `${side} Total Knee Arthroplasty`;
+            } else if (primaryType === 'Partial') {
+                if (joint === 'Hip') procName = `${side} Hip Hemiarthroplasty`;
+                else if (joint === 'Knee') procName = `${side} Unicompartmental Knee Arthroplasty`;
+            } else {
+                procName = 'Select Primary Type (Total or Partial)';
+            }
+        } else if (surgeryType === 'Revision') {
+            procName = `${side} Revision ${joint} Arthroplasty`;
+        }
+    }
+    display.textContent = procName;
+    display.style.color = (procName.includes('Select') || procName.includes('Revision')) ? '#6c757d' : '#005030';
+}
+
+// Attach listeners for dynamic calc on add form (edit forms have inline or separate)
+document.addEventListener('DOMContentLoaded', function() {
+    const addForm = document.querySelector('form[action*="add_surgery"]');
+    if (addForm) {
+        ['side', 'joint', 'surgery_type', 'primary_type'].forEach(name => {
+            const sel = addForm.querySelector(`select[name="${name}"]`);
+            if (sel) {
+                sel.addEventListener('change', () => updateCalculatedProcedure(addForm));
+            }
+        });
+        // initial if any prefilled (none)
+        updateCalculatedProcedure(addForm);
+    }
+});
+</script>
+
+{% endblock %}
