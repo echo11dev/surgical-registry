@@ -561,6 +561,14 @@ def get_all_lookups():
         'surgeons': Surgeon.query.order_by(Surgeon.name).all()
     }
 
+
+# Context processor to make current date available in all templates
+@app.context_processor
+def inject_current_date():
+    from datetime import date
+    return {'current_date': date.today().strftime('%B %d, %Y')}
+
+
 # ==================== ROUTES ====================
 
 @app.route('/')
