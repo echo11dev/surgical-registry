@@ -690,24 +690,12 @@ def dashboard():
         ).scalar() or 0
         stats['revision_burden'] = round((revision_count / total_surgeries) * 100, 1)
 
-        # 4. Outpatient Joint % - still needs some processing but much lighter
-        joint_keywords = ('Hip', 'Knee', 'UKA')
-        outpatient_joint_count = db.session.query(db.func.count(Surgery.id)).filter(
-            Surgery.outpatient == True,
-            ProcedureType.name.isnot(None)
-        ).join(ProcedureType, isouter=True).filter(
-            db.or_(*[ProcedureType.name.like(f'%{kw}%') for kw in joint_keywords])
+        # 4. 90-Day Reoperation Rate (from complications.reoperation)
+        reoperation_90d_count = db.session.query(db.func.count(Surgery.id)).filter(
+            Surgery.complications.contains({'reoperation': 'yes'})
         ).scalar() or 0
 
-        total_joint_surgeries = db.session.query(db.func.count(Surgery.id)).join(
-            ProcedureType, isouter=True
-        ).filter(
-            db.or_(*[ProcedureType.name.like(f'%{kw}%') for kw in joint_keywords])
-        ).scalar() or 0
-
-        stats['outpatient_joint_percent'] = round(
-            (outpatient_joint_count / total_joint_surgeries * 100), 1
-        ) if total_joint_surgeries > 0 else 0
+        stats['reoperation_90d_rate'] = round((reoperation_90d_count / total_surgeries) * 100, 1)
 
     else:
         stats['complication_rate'] = 0
@@ -980,9 +968,12 @@ def add_surgery():
             flash('Could not calculate Procedure Type. Ensure all fields (including Primary Type for Primary surgeries) are selected.', 'danger')
             return redirect(request.referrer or url_for('patients_list'))
 
-        # === Quality Safeguard Logic ===
+        # === Quality Safeguard Logic (with debug) ===
         revision_major_str = request.form.get('revision_major_components')
         revision_major_components = None
+
+        # Temporary debug - will appear in Render logs
+        print(f"[DEBUG] surgery_type={surgery_type}, revision_major_str={revision_major_str}")
 
         if surgery_type == 'Revision':
             if not revision_major_str:
@@ -1031,6 +1022,7 @@ def add_surgery():
                     db.session.add(previous_surgery)
                 surgery.parent_surgery_id = previous_surgery.id if previous_surgery else None
                 flash('Major revision recorded. Previous surgery marked as Revised.', 'info')
+                print(f"[DEBUG] MAJOR REVISION detected. Previous surgery ID={previous_surgery.id if previous_surgery else None} marked as Revised.")
 
             elif revision_major_components is False:
                 # No major components → Link as child (simplified revision)
