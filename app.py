@@ -140,6 +140,11 @@ class Surgery(db.Model):
     # Complications
     complications = db.Column(db.JSON, default={})  # Stores Yes/No for each complication
 
+    # === Quality Safeguards: Revision & Surgery Status ===
+    revision_major_components = db.Column(db.Boolean)  # True = exchanged major components
+    parent_surgery_id = db.Column(db.Integer, db.ForeignKey('surgeries.id'))
+    surgery_status = db.Column(db.String(20), default='Active')  # Active, Closed, Revised
+
     # Performance indexes for common registry queries (dashboard, reports, research exports)
     __table_args__ = (
         db.Index('ix_surgery_date_joint_type', 'surgery_date', 'joint', 'surgery_type'),
@@ -154,6 +159,9 @@ class Surgery(db.Model):
     
     implants = db.relationship('Implant', backref='surgery', cascade='all, delete-orphan', lazy=True)
     research_projects = db.relationship('ResearchProject', secondary='surgery_research_projects', backref='surgeries', lazy='dynamic')
+    
+    # Self-referential relationship for simplified revisions
+    parent_surgery = db.relationship('Surgery', remote_side=[id], backref='child_revisions')
 
 class Implant(db.Model):
     __tablename__ = 'implants'
@@ -888,6 +896,22 @@ def add_surgery():
             flash('Could not calculate Procedure Type. Ensure all fields (including Primary Type for Primary surgeries) are selected.', 'danger')
             return redirect(request.referrer or url_for('patients_list'))
 
+        # === Quality Safeguard Logic ===
+        revision_major_str = request.form.get('revision_major_components')
+        revision_major_components = None
+        if revision_major_str is not None:
+            revision_major_components = (revision_major_str.lower() == 'true')
+
+        # Check for existing Primary on this joint/side
+        existing_primaries = Surgery.query.filter_by(
+            patient_id=patient_id, joint=joint, side=side, surgery_type='Primary'
+        ).count()
+
+        if surgery_type == 'Primary' and existing_primaries > 0:
+            flash('Error: A Primary surgery already exists for this joint and side. Only one Primary is allowed per joint.', 'danger')
+            return redirect(request.referrer or url_for('patients_list'))
+
+        # Create surgery object
         surgery = Surgery(
             patient_id=patient_id,
             surgery_date=surgery_date,
@@ -895,13 +919,37 @@ def add_surgery():
             surgeon_id=surgeon_id,
             hospital_id=hospital_id,
             notes=notes,
-            # New fields
             joint=joint,
             side=side,
             surgery_type=surgery_type,
-            revision_reason=revision_reason
-            # operating_room and duration_minutes deprecated/removed from form
+            revision_reason=revision_reason,
+            revision_major_components=revision_major_components,
+            surgery_status='Active'
         )
+
+        # Handle Revision logic
+        if surgery_type == 'Revision':
+            # Find previous surgery on same joint/side
+            previous_surgery = Surgery.query.filter_by(
+                patient_id=patient_id, joint=joint, side=side
+            ).order_by(Surgery.surgery_date.desc()).first()
+
+            if revision_major_components is True:
+                # Major component revision → New surgery + close previous
+                if previous_surgery:
+                    previous_surgery.surgery_status = 'Revised'
+                    db.session.add(previous_surgery)
+                surgery.parent_surgery_id = previous_surgery.id if previous_surgery else None
+                flash('Major revision recorded. Previous surgery marked as Revised.', 'info')
+
+            elif revision_major_components is False:
+                # No major components → Link as child (simplified revision)
+                if previous_surgery:
+                    surgery.parent_surgery_id = previous_surgery.id
+                    flash('Simplified revision linked to previous surgery.', 'info')
+                else:
+                    flash('Note: This revision has no prior surgery recorded in the system (primary done elsewhere).', 'warning')
+
         db.session.add(surgery)
         db.session.commit()
         flash('Surgery added successfully!', 'success')
@@ -960,6 +1008,35 @@ def edit_surgery(surgery_id):
         surgery.side = side
         surgery.surgery_type = surgery_type
         surgery.revision_reason = revision_reason
+
+        # === Quality Safeguard: Handle revision_major_components on edit ===
+        revision_major_str = request.form.get('revision_major_components')
+        if revision_major_str is not None:
+            new_major_value = (revision_major_str.lower() == 'true')
+            
+            # Only apply logic if the value actually changed
+            if surgery.revision_major_components != new_major_value:
+                surgery.revision_major_components = new_major_value
+
+                if surgery.surgery_type == 'Revision':
+                    previous_surgery = Surgery.query.filter(
+                        Surgery.patient_id == surgery.patient_id,
+                        Surgery.joint == surgery.joint,
+                        Surgery.side == surgery.side,
+                        Surgery.id != surgery.id
+                    ).order_by(Surgery.surgery_date.desc()).first()
+
+                    if new_major_value is True:
+                        # Major revision → mark previous as Revised
+                        if previous_surgery:
+                            previous_surgery.surgery_status = 'Revised'
+                            db.session.add(previous_surgery)
+                        flash('Major component revision confirmed. Previous surgery marked as Revised.', 'info')
+                    else:
+                        # Minor revision → link as child if not already linked
+                        if previous_surgery and not surgery.parent_surgery_id:
+                            surgery.parent_surgery_id = previous_surgery.id
+                            flash('Revision linked as simplified (minor) procedure under previous surgery.', 'info')
         
         db.session.commit()
         flash('Surgery updated successfully!', 'success')

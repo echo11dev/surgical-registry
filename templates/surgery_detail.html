@@ -1204,6 +1204,23 @@ function openAddImplantForComponent(implantTypeName) {
                                 <option value="Septic" {% if surgery.revision_reason == 'Septic' %}selected{% endif %}>Septic</option>
                             </select>
                         </div>
+
+                        <!-- Major Component Question in Edit Form -->
+                        {% if surgery.surgery_type == 'Revision' %}
+                        <div class="col-md-12 mt-2">
+                            <div class="alert alert-warning py-2 mb-2">
+                                <strong>Important:</strong> Does this revision involve exchanging of major components (femoral/acetabular for hip, femoral/tibial for knee)?
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="revision_major_components" id="edit_major_yes" value="true" {% if surgery.revision_major_components %}checked{% endif %}>
+                                <label class="form-check-label" for="edit_major_yes">Yes - Major components exchanged</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="revision_major_components" id="edit_major_no" value="false" {% if surgery.revision_major_components is false %}checked{% endif %}>
+                                <label class="form-check-label" for="edit_major_no">No - Minor procedure only</label>
+                            </div>
+                        </div>
+                        {% endif %}
                         <div class="col-md-6">
                             <label class="form-label">Surgeon</label>
                             <select name="surgeon_id" class="form-select">

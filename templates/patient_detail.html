@@ -75,15 +75,23 @@
             </thead>
             <tbody>
                 {% for surgery in surgeries %}
-                <tr>
+                <tr class="{% if surgery.surgery_status == 'Revised' %}table-warning{% elif surgery.parent_surgery_id %}table-light{% endif %}">
                     <td>
                         <strong>{{ surgery.surgery_date.strftime('%b %d, %Y') }}</strong>
+                        {% if surgery.surgery_status == 'Revised' %}
+                            <span class="badge bg-warning text-dark ms-1">Revised</span>
+                        {% elif surgery.parent_surgery_id %}
+                            <span class="badge bg-secondary ms-1">Minor Revision</span>
+                        {% endif %}
                     </td>
                     <td>
                         {% if surgery.procedure_type %}
                             <span class="badge badge-procedure">
                                 {% if surgery.side %}{{ surgery.side }} {% endif %}{{ surgery.procedure_type.name }}
                             </span>
+                            {% if surgery.parent_surgery_id %}
+                                <small class="text-muted d-block">↳ Linked to previous surgery</small>
+                            {% endif %}
                         {% else %}
                             <span class="text-muted">—</span>
                         {% endif %}
@@ -188,6 +196,21 @@
                                 <option value="Aseptic">Aseptic</option>
                                 <option value="Septic">Septic</option>
                             </select>
+                        </div>
+
+                        <!-- Major Component Revision Question -->
+                        <div class="col-md-12" id="major_component_group" style="display: none;">
+                            <div class="alert alert-warning py-2 mb-2">
+                                <strong>Important:</strong> Does this revision involve exchanging of major components (femoral/acetabular for hip, femoral/tibial for knee)?
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="revision_major_components" id="major_yes" value="true">
+                                <label class="form-check-label" for="major_yes">Yes - Major components exchanged</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="revision_major_components" id="major_no" value="false">
+                                <label class="form-check-label" for="major_no">No - Minor procedure only</label>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Surgeon</label>
