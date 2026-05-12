@@ -13,6 +13,7 @@ from datetime import datetime, date, timedelta
 from collections import defaultdict
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_, text
 
@@ -135,10 +136,10 @@ class Surgery(db.Model):
     
     # Elixhauser Comorbidity Index (van Walraven)
     elixhauser_score = db.Column(db.Integer, default=0)
-    comorbidities = db.Column(db.JSON, default={})  # Stores Yes/No for each comorbidity
+    comorbidities = db.Column(JSONB, default={})  # Stores Yes/No for each comorbidity (JSONB for GIN indexes)
     
     # Complications
-    complications = db.Column(db.JSON, default={})  # Stores Yes/No for each complication
+    complications = db.Column(JSONB, default={})  # Stores Yes/No for each complication (JSONB for GIN indexes)
 
     # === Quality Safeguards: Revision & Surgery Status ===
     revision_major_components = db.Column(db.Boolean)  # True = exchanged major components
