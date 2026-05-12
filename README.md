@@ -2,7 +2,7 @@
 
 **Production-ready Flask web application** for managing a comprehensive surgical registry focused on hip and knee arthroplasty. Built for research, quality improvement, and standardized complication tracking at the University of Miami.
 
-## Key Features (v1.6.1 – May 2026)
+## Key Features (v1.6.2 – May 2026)
 
 ### Core Registry Functions
 - **Patients**: Full CRUD with search by name, MRN, phone. Includes demographics, BMI auto-calculation, race/ethnicity fields.

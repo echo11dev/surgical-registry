@@ -164,7 +164,7 @@ class Surgery(db.Model):
         # Partial GIN index - only index rows that actually have complications recorded
         db.Index('idx_surgery_complications_has_data', 'complications',
                  postgresql_using='gin',
-                 postgresql_where=db.text("complications IS NOT NULL AND complications != '{}'")),
+                 postgresql_where=db.text("complications IS NOT NULL AND complications <> '{}'::jsonb")),
     )
     
     # Outpatient / Same-day discharge
