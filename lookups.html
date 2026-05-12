@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Implant Master Catalog{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-database me-2"></i>Implant Master Catalog</h2>
+            <p class="text-muted mb-0">Central database of all available implants. Search by reference #, model, or design.</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addImplantModal">
+            <i class="bi bi-plus-circle me-2"></i>Add New Implant
+        </button>
+    </div>
+
+    <!-- Search -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('implant_master') }}" class="row g-2">
+                <div class="col-md-8">
+                    <input type="text" name="search" class="form-control" placeholder="Search reference #, model, or design..." value="{{ search }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-search me-1"></i> Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Catalog Table -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>{{ catalog|length }} Implants in Catalog</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Reference #</th>
+                        <th>Implant Type</th>
+                        <th>Manufacturer</th>
+                        <th>Model / Design</th>
+                        <th>Fixation</th>
+                        <th>Side</th>
+                        <th>Size</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in catalog %}
+                    <tr>
+                        <td><code class="fw-bold">{{ item.catalog_number }}</code></td>
+                        <td>
+                            <span class="badge bg-secondary">{{ item.implant_type.name if item.implant_type else '—' }}</span>
+                        </td>
+                        <td>{{ item.manufacturer.name if item.manufacturer else '—' }}</td>
+                        <td>
+                            <strong>{{ item.model or '—' }}</strong>
+                            {% if item.design %}<br><small class="text-muted">{{ item.design }}</small>{% endif %}
+                        </td>
+                        <td><span class="badge bg-info text-dark">{{ item.fixation or '—' }}</span></td>
+                        <td>
+                            {% if item.side == 'Left' %}
+                                <span class="badge bg-primary">Left</span>
+                            {% elif item.side == 'Right' %}
+                                <span class="badge bg-danger">Right</span>
+                            {% else %}
+                                <span class="text-muted">{{ item.side or '—' }}</span>
+                            {% endif %}
+                        </td>
+                        <td><code>{{ item.size or '—' }}</code></td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editImplantModal{{ item.id }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <form action="{{ url_for('delete_implant_catalog', catalog_id=item.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-danger" 
+                                            onclick="return confirm('Delete {{ item.catalog_number }} from master catalog?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            No implants found. Add your first implant using the button above.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Implant Modal -->
+<div class="modal fade" id="addImplantModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Add New Implant to Master Catalog</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_implant_catalog') }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Catalog / Reference Number <span class="text-danger">*</span></label>
+                            <input type="text" name="catalog_number" class="form-control" placeholder="e.g. STR-ACC-5" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Implant Type <span class="text-danger">*</span></label>
+                            <select name="implant_type_id" class="form-select" required>
+                                <option value="">Select type...</option>
+                                {% for it in lookups.implant_types %}
+                                <option value="{{ it.id }}">{{ it.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Manufacturer <span class="text-danger">*</span></label>
+                            <select name="manufacturer_id" class="form-select" required>
+                                <option value="">Select manufacturer...</option>
+                                {% for m in lookups.manufacturers %}
+                                <option value="{{ m.id }}">{{ m.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Model <span class="text-danger">*</span></label>
+                            <input type="text" name="model" class="form-control" placeholder="e.g. Accolade II" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Design</label>
+                            <input type="text" name="design" class="form-control" placeholder="CR, PS, Cementless...">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Fixation</label>
+                            <input type="text" name="fixation" class="form-control" placeholder="Cemented / Cementless">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Side</label>
+                            <select name="side" class="form-select">
+                                <option value="">N/A</option>
+                                <option value="Left">Left</option>
+                                <option value="Right">Right</option>
+                                <option value="Both">Both</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Size</label>
+                            <input type="text" name="size" class="form-control" placeholder="Size 7 / 54mm">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Description / Notes</label>
+                            <textarea name="description" class="form-control" rows="2" placeholder="Additional details..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add to Catalog</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modals (one per implant) -->
+{% for item in catalog %}
+<div class="modal fade" id="editImplantModal{{ item.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Implant: {{ item.catalog_number }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('edit_implant_catalog', catalog_id=item.id) }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Catalog Number</label>
+                            <input type="text" name="catalog_number" class="form-control" value="{{ item.catalog_number }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Implant Type</label>
+                            <select name="implant_type_id" class="form-select" required>
+                                {% for it in lookups.implant_types %}
+                                <option value="{{ it.id }}" {% if item.implant_type_id == it.id %}selected{% endif %}>{{ it.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Manufacturer</label>
+                            <select name="manufacturer_id" class="form-select" required>
+                                {% for m in lookups.manufacturers %}
+                                <option value="{{ m.id }}" {% if item.manufacturer_id == m.id %}selected{% endif %}>{{ m.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Model</label>
+                            <input type="text" name="model" class="form-control" value="{{ item.model or '' }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Design</label>
+                            <input type="text" name="design" class="form-control" value="{{ item.design or '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Fixation</label>
+                            <input type="text" name="fixation" class="form-control" value="{{ item.fixation or '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Side</label>
+                            <select name="side" class="form-select">
+                                <option value="">N/A</option>
+                                <option value="Left" {% if item.side == 'Left' %}selected{% endif %}>Left</option>
+                                <option value="Right" {% if item.side == 'Right' %}selected{% endif %}>Right</option>
+                                <option value="Both" {% if item.side == 'Both' %}selected{% endif %}>Both</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Size</label>
+                            <input type="text" name="size" class="form-control" value="{{ item.size or '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="2">{{ item.description or '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}

@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Exports • University of Miami Hip & Knee Arthroplasty Registry{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1">
+                <i class="bi bi-file-earmark-text text-primary me-2"></i>
+                Reports &amp; Data Exports
+            </h1>
+            <p class="text-muted mb-0">University of Miami Hip &amp; Knee Arthroplasty Registry — v1.1 (May 2026)</p>
+        </div>
+        <div class="text-end">
+            <span class="badge bg-success">Aligned with Hip Society (2015) &amp; Knee Society (2013) Standards</span>
+        </div>
+    </div>
+
+    <!-- Stats Summary -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card stats-card border-0 shadow-sm">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                        <i class="bi bi-people fs-1 text-primary"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Total Patients</div>
+                        <div class="h3 mb-0 fw-bold">{{ stats.patients }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stats-card border-0 shadow-sm">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                        <i class="bi bi-journal-medical fs-1 text-primary"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Total Surgeries</div>
+                        <div class="h3 mb-0 fw-bold">{{ stats.surgeries }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stats-card border-0 shadow-sm">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                        <i class="bi bi-box-seam fs-1 text-primary"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Total Implants Tracked</div>
+                        <div class="h3 mb-0 fw-bold">{{ stats.implants }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. FULL BACKUP SECTION -->
+    <div class="card shadow-sm mb-5 border-success">
+        <div class="card-header bg-success text-white d-flex align-items-center">
+            <i class="bi bi-download me-2 fs-4"></i>
+            <div>
+                <h4 class="mb-0">1. Full Registry Backup (All Data)</h4>
+                <small>Recommended for archiving, audits, and complete research datasets</small>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <p class="mb-2">Download a single ZIP archive containing <strong>three standardized CSV files</strong>:</p>
+                    <ul class="mb-2 small">
+                        <li><code>01_patients.csv</code> — Demographics, BMI, race/ethnicity, contact</li>
+                        <li><code>02_surgeries.csv</code> — All procedures with <strong>complications (JSON)</strong>, Elixhauser scores, outpatient status, standardized procedure names</li>
+                        <li><code>03_implants.csv</code> — Full implant tracking with lot numbers and reference numbers</li>
+                    </ul>
+                    <p class="text-muted small mb-0">Data is ready for statistical analysis, IRB submissions, or migration to other systems. Includes all current registry records.</p>
+                </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <a href="{{ url_for('export_full_backup') }}" class="btn btn-success btn-lg px-4 shadow">
+                        <i class="bi bi-file-zip-fill me-2"></i> Download Full Backup ZIP
+                    </a>
+                    <div class="small text-muted mt-2">~ {{ (stats.patients + stats.surgeries + stats.implants) }} records included</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. SPECIFIC / FILTERED REPORTS -->
+    <h3 class="mb-3">
+        <i class="bi bi-funnel me-2"></i>2. Specific Reports — Filter by Date, Surgeon, or Implant
+    </h3>
+    <p class="text-muted">Generate targeted CSV exports for research cohorts, quality improvement, surgeon performance review, or device tracking. All exports respect the standardized complication definitions from The Hip Society and The Knee Society.</p>
+
+    <div class="row g-4">
+        <!-- BY DATE -->
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-calendar-range me-2"></i> By Date Range
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('export_by_date') }}" method="get">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Start Date <span class="text-danger">*</span></label>
+                            <input type="date" name="start_date" class="form-control" value="2024-01-01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">End Date <span class="text-danger">*</span></label>
+                            <input type="date" name="end_date" class="form-control" value="2026-05-12" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">What to Export</label>
+                            <select name="export_type" class="form-select">
+                                <option value="surgeries">Surgeries in Range (with complication counts)</option>
+                                <option value="implants">Implants Used in Date Range</option>
+                                <option value="full">Full Filtered Backup (ZIP with surgeries + implants)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-download me-1"></i> Download Report
+                        </button>
+                    </form>
+                    <div class="form-text mt-2 small">Perfect for quarterly QI reports or research time-to-event analyses.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BY SURGEON -->
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-person-badge me-2"></i> By Surgeon
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('export_by_surgeon') }}" method="get">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Select Surgeon <span class="text-danger">*</span></label>
+                            <select name="surgeon_id" class="form-select" required>
+                                <option value="">— Choose a surgeon —</option>
+                                {% for s in surgeons %}
+                                <option value="{{ s.id }}">{{ s.name }}{% if s.specialty %} ({{ s.specialty }}){% endif %}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="include_implants" value="yes" id="includeImplants" checked>
+                                <label class="form-check-label" for="includeImplants">
+                                    Include detailed implant list per case
+                                </label>
+                            </div>
+                            <div class="form-text small">When unchecked, exports surgery-level summary with Elixhauser &amp; complication counts.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-download me-1"></i> Download Surgeon Report (CSV)
+                        </button>
+                    </form>
+                    <div class="form-text mt-2 small">Ideal for individual surgeon outcomes tracking, re-credentialing, or AAHKS/AAOS reporting.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BY IMPLANT -->
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-box-seam me-2"></i> By Implant / Manufacturer
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('export_by_implant') }}" method="get">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Manufacturer</label>
+                            <select name="manufacturer_id" class="form-select">
+                                <option value="">All Manufacturers</option>
+                                {% for m in manufacturers %}
+                                <option value="{{ m.id }}">{{ m.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Implant Type (optional)</label>
+                            <select name="implant_type_id" class="form-select">
+                                <option value="">All Implant Types</option>
+                                {% for it in implant_types %}
+                                <option value="{{ it.id }}">{{ it.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-download me-1"></i> Download Implant Usage Report (CSV)
+                        </button>
+                    </form>
+                    <div class="form-text mt-2 small">Essential for post-market surveillance, lot tracking, recall management, and outcomes by device.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legacy Quick Exports -->
+    <div class="mt-5">
+        <h5 class="text-muted mb-3"><i class="bi bi-clock-history me-2"></i>Legacy Quick Exports (still supported)</h5>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('export_patients_csv') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-download me-1"></i> All Patients CSV
+            </a>
+            <a href="{{ url_for('export_surgeries_csv') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-download me-1"></i> All Surgeries CSV
+            </a>
+            <a href="{{ url_for('export_implants_csv') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-download me-1"></i> All Implants CSV
+            </a>
+        </div>
+        <p class="small text-muted mt-2">These remain available for backwards compatibility. The new filtered options above are recommended for most research and reporting needs.</p>
+    </div>
+
+    <!-- Footer note -->
+    <div class="alert alert-light border mt-4 small">
+        <strong>Registry Note:</strong> All exports include standardized procedure names generated by the registry algorithm and complication data structured according to The Knee Society (TKA 2013) and The Hip Society (THA 2015) definitions. 
+        For de-identified research exports, please contact the IT Director. Data is suitable for publication, benchmarking, and CMS/AAHKS quality reporting.
+    </div>
+</div>
+{% endblock %}

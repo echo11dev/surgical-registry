@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard • Surgical Registry{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-1">Welcome back, Dr. Admin</h1>
+                <p class="text-muted mb-0">Here's what's happening with your surgical registry today.</p>
+            </div>
+            <div>
+                <a href="{{ url_for('patients_list') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>New Patient
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-4 mb-5">
+    <div class="col-md-3">
+        <div class="card stats-card h-100 border-0">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h6 class="text-muted mb-1">Total Patients</h6>
+                    <h2 class="mb-0 fw-bold">{{ stats.patients }}</h2>
+                </div>
+                <div class="ms-3">
+                    <i class="bi bi-people-fill text-primary" style="font-size: 2.75rem; opacity: 0.2;"></i>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-0 py-2">
+                <a href="{{ url_for('patients_list') }}" class="text-decoration-none small">View all patients →</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card h-100 border-0">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h6 class="text-muted mb-1">Surgeries Performed</h6>
+                    <h2 class="mb-0 fw-bold">{{ stats.surgeries }}</h2>
+                </div>
+                <div class="ms-3">
+                    <i class="bi bi-activity text-success" style="font-size: 2.75rem; opacity: 0.2;"></i>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-0 py-2">
+                <span class="small text-muted">Across {{ stats.hospitals }} hospitals</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card h-100 border-0">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h6 class="text-muted mb-1">Implants Tracked</h6>
+                    <h2 class="mb-0 fw-bold">{{ stats.implants }}</h2>
+                </div>
+                <div class="ms-3">
+                    <i class="bi bi-cpu text-warning" style="font-size: 2.75rem; opacity: 0.2;"></i>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-0 py-2">
+                <span class="small text-muted">Unique devices registered</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card h-100 border-0">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h6 class="text-muted mb-1">Overall Complication Rate</h6>
+                    <h2 class="mb-0 fw-bold">{{ stats.complication_rate }}<span class="fs-5">%</span></h2>
+                </div>
+                <div class="ms-3">
+                    <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2.75rem; opacity: 0.2;"></i>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-0 py-2">
+                <small class="text-muted">Any recorded complication</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Complication Metrics Row -->
+<div class="row g-3 mt-1 mb-4">
+    <div class="col-md-3">
+        <div class="card stats-card border-0">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1 small">Deep Infection Rate</h6>
+                        <h3 class="mb-0 fw-bold">{{ stats.deep_infection_rate }}<span class="fs-6">%</span></h3>
+                    </div>
+                    <i class="bi bi-bug text-danger" style="font-size: 2rem; opacity: 0.3;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card border-0">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1 small">30-Day Readmission Rate</h6>
+                        <h3 class="mb-0 fw-bold">{{ stats.readmission_30d_rate }}<span class="fs-6">%</span></h3>
+                    </div>
+                    <i class="bi bi-hospital text-info" style="font-size: 2rem; opacity: 0.3;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card border-0">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1 small">Revision Burden</h6>
+                        <h3 class="mb-0 fw-bold">{{ stats.revision_burden }}<span class="fs-6">%</span></h3>
+                    </div>
+                    <i class="bi bi-arrow-repeat text-warning" style="font-size: 2rem; opacity: 0.3;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card border-0">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1 small">% Outpatient Joints</h6>
+                        <h3 class="mb-0 fw-bold">{{ stats.outpatient_joint_percent }}<span class="fs-6">%</span></h3>
+                    </div>
+                    <i class="bi bi-clock-history text-success" style="font-size: 2rem; opacity: 0.3;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Recent Surgeries -->
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Recent Surgeries</h5>
+                <a href="{{ url_for('patients_list') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_surgeries %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 data-table">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Date</th>
+                                <th>Procedure</th>
+                                <th>Surgeon</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for surgery, patient in recent_surgeries %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="fw-semibold text-decoration-none">
+                                        {{ patient.full_name }}
+                                    </a>
+                                    <br><small class="text-muted">{{ patient.mrn }}</small>
+                                </td>
+                                <td>{{ surgery.surgery_date.strftime('%b %d, %Y') }}</td>
+                                <td>
+                                    {% if surgery.procedure_type %}
+                                        <span class="badge badge-procedure">
+                                            {% if surgery.side %}{{ surgery.side }} {% endif %}{{ surgery.procedure_type.name }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if surgery.surgeon %}{{ surgery.surgeon.name }}{% else %}—{% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('surgery_detail', surgery_id=surgery.id) }}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-3">No surgeries recorded yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Procedures -->
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0"><i class="bi bi-bar-chart-steps me-2 text-primary"></i>Top Procedures</h5>
+            </div>
+            <div class="card-body">
+                {% if top_procedures %}
+                    {% for name, count in top_procedures %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="fw-semibold">{{ name }}</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="progress flex-grow-1 me-2" style="width: 120px; height: 8px;">
+                                <div class="progress-bar bg-primary" style="width: {{ (count / (top_procedures[0][1] or 1) * 100)|round }}%"></div>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">{{ count }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center py-4">No procedure data available.</p>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-white">
+                <small class="text-muted">Based on all recorded surgeries</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analytics Charts -->
+<div class="row g-4 mt-5 mb-5">
+    <!-- Surgeries per Year (Last 5 Years) -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0"><i class="bi bi-bar-chart me-2 text-primary"></i>Surgeries per Year (Last 5 Years)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="surgeriesByYearChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Complication Rate by Month (Last 12 Months) -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0"><i class="bi bi-graph-up me-2 text-warning"></i>Complication Rate by Month (Last 12 Months)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="complicationRateChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    // Surgeries per Year - Bar Chart
+    const yearCtx = document.getElementById('surgeriesByYearChart');
+    if (yearCtx) {
+        new Chart(yearCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ year_labels | tojson }},
+                datasets: [{
+                    label: 'Surgeries',
+                    data: {{ year_counts | tojson }},
+                    backgroundColor: '#005030',
+                    borderColor: '#003d24',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+
+    // Complication Rate by Month - Line Chart
+    const compCtx = document.getElementById('complicationRateChart');
+    if (compCtx) {
+        new Chart(compCtx, {
+            type: 'line',
+            data: {
+                labels: {{ monthly_complication_rates | map(attribute='month') | list | tojson }},
+                datasets: [{
+                    label: 'Complication Rate (%)',
+                    data: {{ monthly_complication_rates | map(attribute='rate') | list | tojson }},
+                    borderColor: '#FF6B00',
+                    backgroundColor: 'rgba(255, 107, 0, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    pointBackgroundColor: '#FF6B00'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        max: 100,
+                        ticks: { callback: function(val) { return val + '%'; } }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.raw + '% complication rate';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+
+<!-- Research Projects Enrollment -->
+{% if research_enrollment %}
+<div class="row g-4 mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="mb-0"><i class="bi bi-journal-text me-2 text-primary"></i>Research Projects — Patients Enrolled</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Research Project</th>
+                                <th class="text-end">Patients Enrolled</th>
+                                <th class="text-end">Goal</th>
+                                <th class="text-end">% Enrolled</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for name, goal, count in research_enrollment %}
+                            <tr>
+                                <td><strong>{{ name }}</strong></td>
+                                <td class="text-end">
+                                    <span class="badge bg-primary rounded-pill px-3">{{ count }}</span>
+                                </td>
+                                <td class="text-end text-muted">{{ goal or '—' }}</td>
+                                <td class="text-end">
+                                    {% if goal and goal > 0 %}
+                                        {% set pct = (count / goal * 100) | round(1) %}
+                                        <span class="badge {% if pct >= 100 %}bg-success{% elif pct >= 50 %}bg-warning{% else %}bg-secondary{% endif %}">
+                                            {{ pct }}%
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
