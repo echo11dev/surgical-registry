@@ -9,7 +9,8 @@ import os
 import csv
 import io
 import zipfile
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+from collections import defaultdict
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
@@ -39,12 +40,14 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 db = SQLAlchemy(app)
 
 # ==================== MODELS ====================
+# Performance indexes added to Surgery, Implant, and Patient for:
+# - Fast date-range filtering (dashboard charts, reports)
+# - Surgeon / Hospital / Joint / Surgery Type queries
+# - Implant tracking and device surveillance
+# These are created automatically on fresh database initialization.
 
-class Gender(db.Model):
-    __tablename__ = 'genders'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(20), unique=True, nullable=False)
-    patients = db.relationship('Patient', backref='gender', lazy=True)
+# Gender lookup table removed.
+# Gender is now handled via the simple 'sex' field ('Male' / 'Female') on the Patient model.
 
 class ProcedureType(db.Model):
     __tablename__ = 'procedure_types'
@@ -84,7 +87,6 @@ class Patient(db.Model):
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     dob = db.Column(db.Date, nullable=False)
-    gender_id = db.Column(db.Integer, db.ForeignKey('genders.id'))  # kept as gender_id for compatibility, labeled as "Sex" in UI
     sex = db.Column(db.String(10))  # 'Male' or 'Female' (simplified)
     weight_kg = db.Column(db.Float)
     height_cm = db.Column(db.Float)
@@ -93,7 +95,7 @@ class Patient(db.Model):
     phone = db.Column(db.String(20))
     email = db.Column(db.String(100))
     address = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     surgeries = db.relationship('Surgery', backref='patient', cascade='all, delete-orphan', lazy=True)
@@ -117,7 +119,7 @@ class Surgery(db.Model):
     __tablename__ = 'surgeries'
     id = db.Column(db.Integer, primary_key=True)
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
-    surgery_date = db.Column(db.Date, nullable=False)
+    surgery_date = db.Column(db.Date, nullable=False, index=True)
     procedure_type_id = db.Column(db.Integer, db.ForeignKey('procedure_types.id'))
     surgeon_id = db.Column(db.Integer, db.ForeignKey('surgeons.id'))
     hospital_id = db.Column(db.Integer, db.ForeignKey('hospitals.id'))
@@ -126,10 +128,10 @@ class Surgery(db.Model):
     notes = db.Column(db.Text)
     
     # New orthopedic-specific fields
-    joint = db.Column(db.String(10))           # 'Hip' or 'Knee'
-    side = db.Column(db.String(10))            # 'Left' or 'Right'
-    surgery_type = db.Column(db.String(20))    # 'Primary' or 'Revision'
-    revision_reason = db.Column(db.String(50)) # 'Aseptic' or 'Infected' (if revision)
+    joint = db.Column(db.String(10), index=True)           # 'Hip' or 'Knee'
+    side = db.Column(db.String(10))
+    surgery_type = db.Column(db.String(20), index=True)    # 'Primary' or 'Revision'
+    revision_reason = db.Column(db.String(50), index=True) # 'Aseptic' or 'Septic' (Revision Type)
     
     # Elixhauser Comorbidity Index (van Walraven)
     elixhauser_score = db.Column(db.Integer, default=0)
@@ -137,6 +139,13 @@ class Surgery(db.Model):
     
     # Complications
     complications = db.Column(db.JSON, default={})  # Stores Yes/No for each complication
+
+    # Performance indexes for common registry queries (dashboard, reports, research exports)
+    __table_args__ = (
+        db.Index('ix_surgery_date_joint_type', 'surgery_date', 'joint', 'surgery_type'),
+        db.Index('ix_surgery_surgeon_date', 'surgeon_id', 'surgery_date'),
+        db.Index('ix_surgery_hospital_date', 'hospital_id', 'surgery_date'),
+    )
     
     # Outpatient / Same-day discharge
     outpatient = db.Column(db.Boolean, default=False)
@@ -149,15 +158,21 @@ class Surgery(db.Model):
 class Implant(db.Model):
     __tablename__ = 'implants'
     id = db.Column(db.Integer, primary_key=True)
-    surgery_id = db.Column(db.Integer, db.ForeignKey('surgeries.id'), nullable=False)
-    implant_type_id = db.Column(db.Integer, db.ForeignKey('implant_types.id'))
-    manufacturer_id = db.Column(db.Integer, db.ForeignKey('manufacturers.id'))
+    surgery_id = db.Column(db.Integer, db.ForeignKey('surgeries.id'), nullable=False, index=True)
+    implant_type_id = db.Column(db.Integer, db.ForeignKey('implant_types.id'), index=True)
+    manufacturer_id = db.Column(db.Integer, db.ForeignKey('manufacturers.id'), index=True)
     model = db.Column(db.String(100))
-    reference_number = db.Column(db.String(100), unique=True)  # was serial_number
+    reference_number = db.Column(db.String(100), unique=True, index=True)  # was serial_number
     size = db.Column(db.String(50))
     lot_number = db.Column(db.String(50))
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Helpful indexes for implant tracking and device surveillance queries
+    __table_args__ = (
+        db.Index('ix_implant_surgery_manufacturer', 'surgery_id', 'manufacturer_id'),
+        db.Index('ix_implant_type_manufacturer', 'implant_type_id', 'manufacturer_id'),
+    )
 
 
 class ResearchProject(db.Model):
@@ -261,14 +276,10 @@ def get_missing_mandatory_implants(surgery):
 
 def seed_initial_data():
     """Seed lookup tables and sample data if database is empty"""
-    if Gender.query.first() is not None:
+    if ProcedureType.query.first() is not None:
         return  # Already seeded
 
     # Lookups
-    genders = ['Male', 'Female']
-    for g in genders:
-        db.session.add(Gender(name=g))
-
     procedure_types = [
         'Total Hip Arthroplasty',
         'Total Knee Arthroplasty',
@@ -566,7 +577,13 @@ def get_all_lookups():
 
 @app.route('/')
 def dashboard():
-    """Main dashboard with statistics and recent activity"""
+    """Main dashboard with statistics and recent activity.
+    
+    Performance optimizations:
+    - Uses SQL aggregation + targeted column loading (load_only style via query)
+    - Avoids loading full Surgery objects when possible
+    - Leverages new indexes on surgery_date, joint, surgery_type, surgeon_id, etc.
+    """
     stats = {
         'patients': Patient.query.count(),
         'surgeries': Surgery.query.count(),
@@ -598,43 +615,60 @@ def dashboard():
         Patient, Patient.id == Surgery.patient_id
     ).group_by(ResearchProject.name, ResearchProject.enrollment_goal).order_by(ResearchProject.name).all()
     
-    # Complication & Outcome Metrics
-    all_surgeries = Surgery.query.all()
-    total_surgeries = len(all_surgeries)
-    
+    # === Optimized Complication & Outcome Metrics ===
+    # Use efficient queries + targeted column loading instead of loading entire objects
+
+    total_surgeries = db.session.query(db.func.count(Surgery.id)).scalar() or 0
+
     if total_surgeries > 0:
-        # Overall complication rate (any 'yes' in complications JSON)
+        # Load only the columns we actually need for calculations (much lighter on memory)
+        surgery_data = db.session.query(
+            Surgery.complications,
+            Surgery.surgery_type,
+            Surgery.outpatient,
+            ProcedureType.name.label('procedure_name')
+        ).outerjoin(ProcedureType).all()
+
+        # Overall complication rate (any 'yes')
         surgeries_with_any_complication = sum(
-            1 for s in all_surgeries 
-            if s.complications and any(v == 'yes' for v in s.complications.values())
+            1 for comp, _, _, _ in surgery_data 
+            if comp and any(v == 'yes' for v in comp.values())
         )
+
         # Deep periprosthetic joint infection
         deep_infection_count = sum(
-            1 for s in all_surgeries 
-            if s.complications and s.complications.get('deep_periprosthetic_joint_infection') == 'yes'
+            1 for comp, _, _, _ in surgery_data 
+            if comp and comp.get('deep_periprosthetic_joint_infection') == 'yes'
         )
+
         # 30-day readmission
         readmission_30d_count = sum(
-            1 for s in all_surgeries 
-            if s.complications and s.complications.get('readmission') == 'yes'
+            1 for comp, _, _, _ in surgery_data 
+            if comp and comp.get('readmission') == 'yes'
         )
-        
+
         stats['complication_rate'] = round((surgeries_with_any_complication / total_surgeries) * 100, 1)
         stats['deep_infection_rate'] = round((deep_infection_count / total_surgeries) * 100, 1)
         stats['readmission_30d_rate'] = round((readmission_30d_count / total_surgeries) * 100, 1)
 
-        # Revision Burden (% of surgeries that are revisions)
-        revision_count = sum(1 for s in all_surgeries if getattr(s, 'surgery_type', None) == 'Revision')
+        # Revision Burden
+        revision_count = sum(1 for _, stype, _, _ in surgery_data if stype == 'Revision')
         stats['revision_burden'] = round((revision_count / total_surgeries) * 100, 1)
 
-        # % Outpatient Joints (THA, TKA, UKA that were outpatient/same-day)
-        joint_keywords = ['Hip', 'Knee', 'UKA']
-        joint_surgeries = [
-            s for s in all_surgeries 
-            if s.procedure_type and any(kw in (s.procedure_type.name or '') for kw in joint_keywords)
-        ]
-        outpatient_joints = sum(1 for s in joint_surgeries if getattr(s, 'outpatient', False))
-        stats['outpatient_joint_percent'] = round((outpatient_joints / len(joint_surgeries) * 100), 1) if joint_surgeries else 0
+        # % Outpatient Joints (more efficient filtering)
+        joint_keywords = ('Hip', 'Knee', 'UKA')
+        outpatient_joints = sum(
+            1 for comp, stype, outpatient, pname in surgery_data
+            if outpatient 
+            and pname 
+            and any(kw in pname for kw in joint_keywords)
+        )
+        joint_surgery_count = sum(
+            1 for _, _, _, pname in surgery_data
+            if pname and any(kw in pname for kw in joint_keywords)
+        )
+        stats['outpatient_joint_percent'] = round((outpatient_joints / joint_surgery_count * 100), 1) if joint_surgery_count > 0 else 0
+
     else:
         stats['complication_rate'] = 0
         stats['deep_infection_rate'] = 0
@@ -642,12 +676,71 @@ def dashboard():
         stats['revision_burden'] = 0
         stats['outpatient_joint_percent'] = 0
     
+    # === Chart Data for Dashboard ===
+    today = date.today()
+    
+    # 1. Surgeries per year - last 5 years
+    five_years_ago = today.year - 4
+    surgeries_by_year = db.session.query(
+        db.func.extract('year', Surgery.surgery_date).label('year'),
+        db.func.count(Surgery.id).label('count')
+    ).filter(
+        db.func.extract('year', Surgery.surgery_date) >= five_years_ago
+    ).group_by(
+        db.func.extract('year', Surgery.surgery_date)
+    ).order_by('year').all()
+    
+    # Fill missing years with 0
+    year_counts = {int(y): c for y, c in surgeries_by_year}
+    surgeries_by_year = [(y, year_counts.get(y, 0)) for y in range(five_years_ago, today.year + 1)]
+    year_labels = [str(y) for y, c in surgeries_by_year]
+    year_counts = [c for y, c in surgeries_by_year]
+    
+    # 2. Complication rate by month - last 12 months (optimized column loading)
+    twelve_months_ago = today - timedelta(days=365)
+    month_complication = defaultdict(lambda: {'total': 0, 'complicated': 0})
+    
+    monthly_surgeries = db.session.query(
+        Surgery.surgery_date,
+        Surgery.complications
+    ).filter(Surgery.surgery_date >= twelve_months_ago).all()
+    
+    for surg_date, comp in monthly_surgeries:
+        if surg_date:
+            key = surg_date.strftime('%Y-%m')
+            month_complication[key]['total'] += 1
+            if comp and any(v == 'yes' for v in comp.values()):
+                month_complication[key]['complicated'] += 1
+    
+    # Build last 12 months list (most recent last for chart)
+    monthly_complication_rates = []
+    current = today.replace(day=1)
+    for i in range(12):
+        key = current.strftime('%Y-%m')
+        data = month_complication.get(key, {'total': 0, 'complicated': 0})
+        rate = round((data['complicated'] / data['total']) * 100, 1) if data['total'] > 0 else 0
+        monthly_complication_rates.append({
+            'month': current.strftime('%b %Y'),
+            'rate': rate,
+            'total': data['total']
+        })
+        # Go to previous month
+        if current.month == 1:
+            current = current.replace(year=current.year - 1, month=12)
+        else:
+            current = current.replace(month=current.month - 1)
+    monthly_complication_rates.reverse()  # oldest → newest
+    
     return render_template('index.html', 
                           stats=stats, 
                           recent_surgeries=recent_surgeries,
                           top_procedures=top_procedures,
                           lookups=lookups,
-                          research_enrollment=research_enrollment)
+                          research_enrollment=research_enrollment,
+                          surgeries_by_year=surgeries_by_year,
+                          year_labels=year_labels,
+                          year_counts=year_counts,
+                          monthly_complication_rates=monthly_complication_rates)
 
 # ---------- PATIENTS ----------
 @app.route('/patients')
@@ -1009,7 +1102,6 @@ def add_lookup(table):
         return redirect(url_for('lookups'))
     
     model_map = {
-        'genders': Gender,
         'procedure_types': ProcedureType,
         'implant_types': ImplantType,
         'manufacturers': Manufacturer,
@@ -1083,7 +1175,6 @@ def edit_lookup(table, entry_id):
 def delete_lookup(table, entry_id):
     """Delete a lookup entry (if not in use)"""
     model_map = {
-        'genders': Gender,
         'procedure_types': ProcedureType,
         'implant_types': ImplantType,
         'manufacturers': Manufacturer,

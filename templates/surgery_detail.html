@@ -1197,14 +1197,11 @@ function openAddImplantForComponent(implantTypeName) {
                             </select>
                         </div>
                         <div class="col-md-3" id="revision_reason_edit_group" style="display: {% if surgery.surgery_type == 'Revision' %}block{% else %}none{% endif %};">
-                            <label class="form-label">Revision Reason</label>
+                            <label class="form-label">Revision Type</label>
                             <select name="revision_reason" class="form-select">
                                 <option value="">—</option>
-                                <option value="Aseptic" {% if surgery.revision_reason == 'Aseptic' %}selected{% endif %}>Aseptic Loosening</option>
-                                <option value="Infected" {% if surgery.revision_reason == 'Infected' %}selected{% endif %}>Periprosthetic Joint Infection</option>
-                                <option value="Fracture" {% if surgery.revision_reason == 'Fracture' %}selected{% endif %}>Periprosthetic Fracture</option>
-                                <option value="Instability" {% if surgery.revision_reason == 'Instability' %}selected{% endif %}>Instability</option>
-                                <option value="Other" {% if surgery.revision_reason == 'Other' %}selected{% endif %}>Other</option>
+                                <option value="Aseptic" {% if surgery.revision_reason == 'Aseptic' %}selected{% endif %}>Aseptic</option>
+                                <option value="Septic" {% if surgery.revision_reason == 'Septic' %}selected{% endif %}>Septic</option>
                             </select>
                         </div>
                         <div class="col-md-6">
