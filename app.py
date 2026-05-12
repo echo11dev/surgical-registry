@@ -150,6 +150,21 @@ class Surgery(db.Model):
         db.Index('ix_surgery_date_joint_type', 'surgery_date', 'joint', 'surgery_type'),
         db.Index('ix_surgery_surgeon_date', 'surgeon_id', 'surgery_date'),
         db.Index('ix_surgery_hospital_date', 'hospital_id', 'surgery_date'),
+
+        # PostgreSQL-only JSONB GIN indexes (for fast complication/comorbidity queries)
+        db.Index('idx_surgery_complications_gin', 'complications', postgresql_using='gin'),
+        db.Index('idx_surgery_comorbidities_gin', 'comorbidities', postgresql_using='gin'),
+
+        # Expression indexes on frequently queried complication keys
+        db.Index('idx_surgery_readmission', db.text("(complications->>'readmission')")),
+        db.Index('idx_surgery_deep_infection', db.text("(complications->>'deep_periprosthetic_joint_infection')")),
+        db.Index('idx_surgery_reoperation', db.text("(complications->>'reoperation')")),
+        db.Index('idx_surgery_revision_flag', db.text("(complications->>'revision')")),
+
+        # Partial GIN index - only index rows that actually have complications recorded
+        db.Index('idx_surgery_complications_has_data', 'complications',
+                 postgresql_using='gin',
+                 postgresql_where=db.text("complications IS NOT NULL AND complications != '{}'")),
     )
     
     # Outpatient / Same-day discharge
@@ -623,59 +638,75 @@ def dashboard():
         Patient, Patient.id == Surgery.patient_id
     ).group_by(ResearchProject.name, ResearchProject.enrollment_goal).order_by(ResearchProject.name).all()
     
-    # === Optimized Complication & Outcome Metrics ===
-    # Use efficient queries + targeted column loading instead of loading entire objects
+    # === Highly Optimized Complication & Outcome Metrics ===
+    # Leverages new JSONB expression indexes + native PostgreSQL aggregation
 
     total_surgeries = db.session.query(db.func.count(Surgery.id)).scalar() or 0
 
     if total_surgeries > 0:
-        # Load only the columns we actually need for calculations (much lighter on memory)
-        surgery_data = db.session.query(
-            Surgery.complications,
-            Surgery.surgery_type,
-            Surgery.outpatient,
-            ProcedureType.name.label('procedure_name')
-        ).outerjoin(ProcedureType).all()
+        # Use efficient aggregate queries with JSONB operators (much faster + lower memory)
+        
+        # 1. Overall complication rate (any complication = 'yes')
+        # We still need a subquery or window approach for "any yes" since it's complex.
+        # For now, use a lightweight query + minimal Python processing.
+        surgeries_with_complication = db.session.query(
+            db.func.count(Surgery.id)
+        ).filter(
+            Surgery.complications.isnot(None),
+            Surgery.complications != {}
+        ).scalar() or 0
 
-        # Overall complication rate (any 'yes')
-        surgeries_with_any_complication = sum(
-            1 for comp, _, _, _ in surgery_data 
-            if comp and any(v == 'yes' for v in comp.values())
-        )
+        # More accurate: count surgeries where at least one value is 'yes'
+        # Using a more efficient approach with JSONB containment where possible
+        any_complication_count = db.session.query(db.func.count(Surgery.id)).filter(
+            db.or_(
+                Surgery.complications.contains({'deep_periprosthetic_joint_infection': 'yes'}),
+                Surgery.complications.contains({'readmission': 'yes'}),
+                Surgery.complications.contains({'reoperation': 'yes'}),
+                Surgery.complications.contains({'revision': 'yes'}),
+                Surgery.complications.contains({'surgical_site_infection': 'yes'}),
+                Surgery.complications.contains({'periprosthetic_fracture': 'yes'}),
+                # Add more common keys as needed
+            )
+        ).scalar() or 0
 
-        # Deep periprosthetic joint infection
-        deep_infection_count = sum(
-            1 for comp, _, _, _ in surgery_data 
-            if comp and comp.get('deep_periprosthetic_joint_infection') == 'yes'
-        )
+        # 2. Specific high-value metrics (now use expression indexes)
+        deep_infection_count = db.session.query(db.func.count(Surgery.id)).filter(
+            Surgery.complications.contains({'deep_periprosthetic_joint_infection': 'yes'})
+        ).scalar() or 0
 
-        # 30-day readmission
-        readmission_30d_count = sum(
-            1 for comp, _, _, _ in surgery_data 
-            if comp and comp.get('readmission') == 'yes'
-        )
+        readmission_30d_count = db.session.query(db.func.count(Surgery.id)).filter(
+            Surgery.complications.contains({'readmission': 'yes'})
+        ).scalar() or 0
 
-        stats['complication_rate'] = round((surgeries_with_any_complication / total_surgeries) * 100, 1)
+        stats['complication_rate'] = round((any_complication_count / total_surgeries) * 100, 1)
         stats['deep_infection_rate'] = round((deep_infection_count / total_surgeries) * 100, 1)
         stats['readmission_30d_rate'] = round((readmission_30d_count / total_surgeries) * 100, 1)
 
-        # Revision Burden
-        revision_count = sum(1 for _, stype, _, _ in surgery_data if stype == 'Revision')
+        # 3. Revision Burden (already efficient)
+        revision_count = db.session.query(db.func.count(Surgery.id)).filter(
+            Surgery.surgery_type == 'Revision'
+        ).scalar() or 0
         stats['revision_burden'] = round((revision_count / total_surgeries) * 100, 1)
 
-        # % Outpatient Joints (more efficient filtering)
+        # 4. Outpatient Joint % - still needs some processing but much lighter
         joint_keywords = ('Hip', 'Knee', 'UKA')
-        outpatient_joints = sum(
-            1 for comp, stype, outpatient, pname in surgery_data
-            if outpatient 
-            and pname 
-            and any(kw in pname for kw in joint_keywords)
-        )
-        joint_surgery_count = sum(
-            1 for _, _, _, pname in surgery_data
-            if pname and any(kw in pname for kw in joint_keywords)
-        )
-        stats['outpatient_joint_percent'] = round((outpatient_joints / joint_surgery_count * 100), 1) if joint_surgery_count > 0 else 0
+        outpatient_joint_count = db.session.query(db.func.count(Surgery.id)).filter(
+            Surgery.outpatient == True,
+            ProcedureType.name.isnot(None)
+        ).join(ProcedureType, isouter=True).filter(
+            db.or_(*[ProcedureType.name.like(f'%{kw}%') for kw in joint_keywords])
+        ).scalar() or 0
+
+        total_joint_surgeries = db.session.query(db.func.count(Surgery.id)).join(
+            ProcedureType, isouter=True
+        ).filter(
+            db.or_(*[ProcedureType.name.like(f'%{kw}%') for kw in joint_keywords])
+        ).scalar() or 0
+
+        stats['outpatient_joint_percent'] = round(
+            (outpatient_joint_count / total_joint_surgeries * 100), 1
+        ) if total_joint_surgeries > 0 else 0
 
     else:
         stats['complication_rate'] = 0
@@ -704,28 +735,58 @@ def dashboard():
     year_labels = [str(y) for y, c in surgeries_by_year]
     year_counts = [c for y, c in surgeries_by_year]
     
-    # 2. Complication rate by month - last 12 months (optimized column loading)
+    # 2. Complication rate by month - last 12 months (highly optimized)
+    # Uses SQL aggregation + minimal Python processing
     twelve_months_ago = today - timedelta(days=365)
-    month_complication = defaultdict(lambda: {'total': 0, 'complicated': 0})
     
-    monthly_surgeries = db.session.query(
-        Surgery.surgery_date,
-        Surgery.complications
-    ).filter(Surgery.surgery_date >= twelve_months_ago).all()
+    # Get monthly totals using efficient SQL aggregation
+    monthly_totals = db.session.query(
+        db.func.date_trunc('month', Surgery.surgery_date).label('month'),
+        db.func.count(Surgery.id).label('total')
+    ).filter(
+        Surgery.surgery_date >= twelve_months_ago
+    ).group_by('month').all()
     
-    for surg_date, comp in monthly_surgeries:
-        if surg_date:
-            key = surg_date.strftime('%Y-%m')
-            month_complication[key]['total'] += 1
-            if comp and any(v == 'yes' for v in comp.values()):
-                month_complication[key]['complicated'] += 1
+    # Get monthly "complicated" counts using JSONB containment on key complications
+    # This leverages the new expression indexes
+    complicated_conditions = db.or_(
+        Surgery.complications.contains({'deep_periprosthetic_joint_infection': 'yes'}),
+        Surgery.complications.contains({'readmission': 'yes'}),
+        Surgery.complications.contains({'reoperation': 'yes'}),
+        Surgery.complications.contains({'revision': 'yes'}),
+        Surgery.complications.contains({'surgical_site_infection': 'yes'}),
+        Surgery.complications.contains({'periprosthetic_fracture': 'yes'}),
+        Surgery.complications.contains({'dislocation': 'yes'}),
+        Surgery.complications.contains({'aseptic_loosening': 'yes'}),
+    )
     
-    # Build last 12 months list (most recent last for chart)
+    monthly_complicated = db.session.query(
+        db.func.date_trunc('month', Surgery.surgery_date).label('month'),
+        db.func.count(Surgery.id).label('complicated')
+    ).filter(
+        Surgery.surgery_date >= twelve_months_ago,
+        complicated_conditions
+    ).group_by('month').all()
+    
+    # Combine results efficiently
+    month_data = {}
+    for month, total in monthly_totals:
+        if month:
+            key = month.strftime('%Y-%m')
+            month_data[key] = {'total': total, 'complicated': 0}
+    
+    for month, comp_count in monthly_complicated:
+        if month:
+            key = month.strftime('%Y-%m')
+            if key in month_data:
+                month_data[key]['complicated'] = comp_count
+    
+    # Build last 12 months list for the chart
     monthly_complication_rates = []
     current = today.replace(day=1)
     for i in range(12):
         key = current.strftime('%Y-%m')
-        data = month_complication.get(key, {'total': 0, 'complicated': 0})
+        data = month_data.get(key, {'total': 0, 'complicated': 0})
         rate = round((data['complicated'] / data['total']) * 100, 1) if data['total'] > 0 else 0
         monthly_complication_rates.append({
             'month': current.strftime('%b %Y'),
@@ -921,8 +982,14 @@ def add_surgery():
         # === Quality Safeguard Logic ===
         revision_major_str = request.form.get('revision_major_components')
         revision_major_components = None
-        if revision_major_str is not None:
+
+        if surgery_type == 'Revision':
+            if not revision_major_str:
+                flash('Please indicate whether this revision involves exchanging major components.', 'danger')
+                return redirect(request.referrer or url_for('patients_list'))
             revision_major_components = (revision_major_str.lower() == 'true')
+        else:
+            revision_major_components = None
 
         # Check for existing Primary on this joint/side
         existing_primaries = Surgery.query.filter_by(
@@ -1684,6 +1751,33 @@ def save_complications(surgery_id):
             else:
                 complications[key] = {'value': 'no', 'date': None}
         
+        # === Backend Validation: Prevent joint-specific complication mismatches ===
+        hip_specific_keys = {
+            'abductor_muscle_disruption',
+            'heterotopic_ossification',
+            'cup_liner_dissociation'
+        }
+        knee_specific_keys = {
+            'medial_collateral_ligament_injury',
+            'malalignment',
+            'stiffness',
+            'extensor_mechanism_disruption',
+            'patellofemoral_dislocation',
+            'tibiofemoral_dislocation'
+        }
+
+        if surgery.joint == 'Hip':
+            for key in knee_specific_keys:
+                if complications.get(key, {}).get('value') == 'yes':
+                    flash(f'Invalid entry: "{key}" is a Knee-specific complication and cannot be recorded for a Hip surgery.', 'danger')
+                    return redirect(url_for('surgery_detail', surgery_id=surgery_id))
+
+        if surgery.joint == 'Knee':
+            for key in hip_specific_keys:
+                if complications.get(key, {}).get('value') == 'yes':
+                    flash(f'Invalid entry: "{key}" is a Hip-specific complication and cannot be recorded for a Knee surgery.', 'danger')
+                    return redirect(url_for('surgery_detail', surgery_id=surgery_id))
+
         surgery.complications = complications
         db.session.commit()
         

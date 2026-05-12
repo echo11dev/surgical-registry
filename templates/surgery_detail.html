@@ -374,6 +374,7 @@
                             <span class="badge bg-primary ms-auto">3 items</span>
                         </div>
                         <div class="row g-2">
+                            {% if surgery.joint == 'Hip' %}
                             {% set hip_complications = [
                                 ('abductor_muscle_disruption', 'Abductor Muscle Disruption'),
                                 ('heterotopic_ossification', 'Heterotopic Ossification'),
@@ -400,11 +401,13 @@
                                 </div>
                             </div>
                             {% endfor %}
+                            {% endif %}
                         </div>
                         <div class="small text-muted mt-1">Note: "Instability / Dislocation" is listed under General Complications (applies to both hip and knee with procedure-specific definitions).</div>
                     </div>
 
                     <!-- 3. KNEE-SPECIFIC COMPLICATIONS -->
+                    {% if surgery.joint == 'Knee' %}
                     <div class="mb-4">
                         <div class="d-flex align-items-center mb-2 pb-1 border-bottom border-success">
                             <h6 class="mb-0 text-success"><i class="bi bi-shield-check me-2"></i>Knee-Specific Complications</h6>
@@ -442,6 +445,7 @@
                             {% endfor %}
                         </div>
                     </div>
+                    {% endif %}
 
                     <!-- 4. KEY OUTCOME EVENTS -->
                     <div class="mb-3">
