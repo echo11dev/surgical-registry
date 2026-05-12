@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: surgical-registry
+    env: python
+    region: oregon
+    plan: free
+    pythonVersion: 3.12.10
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: surgical-registry-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_ENV
+        value: production
+
+databases:
+  - name: surgical-registry-db
+    plan: free
+    region: oregon
+    ipAllowList: []  # Allow internal connections only
