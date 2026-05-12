@@ -53,61 +53,71 @@
 
 <!-- Surgeries Section -->
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0"><i class="bi bi-activity me-2"></i>Surgeries ({{ surgeries|length }})</h4>
+    <h4 class="mb-0"><i class="bi bi-activity me-2"></i>Surgeries ({{ surgery_hierarchy|length }})</h4>
     <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addSurgeryModal">
         <i class="bi bi-plus-circle me-2"></i>Record New Surgery
     </button>
 </div>
 
-{% if surgeries %}
-<div class="card">
-    <div class="table-responsive">
-        <table class="table table-hover mb-0 data-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Procedure</th>
-                    <th>Surgeon</th>
-                    <th>Hospital</th>
-                    <th>Implants</th>
-                    <th class="text-end">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for surgery in surgeries %}
-                <tr class="{% if surgery.surgery_status == 'Revised' %}table-warning{% elif surgery.parent_surgery_id %}table-light{% endif %}">
-                    <td>
-                        <strong>{{ surgery.surgery_date.strftime('%b %d, %Y') }}</strong>
-                        {% if surgery.surgery_status == 'Revised' %}
-                            <span class="badge bg-warning text-dark ms-1">Revised</span>
-                        {% elif surgery.parent_surgery_id %}
-                            <span class="badge bg-secondary ms-1">Minor Revision</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if surgery.procedure_type %}
-                            <span class="badge badge-procedure">
-                                {% if surgery.side %}{{ surgery.side }} {% endif %}{{ surgery.procedure_type.name }}
-                            </span>
-                            {% if surgery.parent_surgery_id %}
-                                <small class="text-muted d-block">↳ Linked to previous surgery</small>
+{% if surgery_hierarchy %}
+<div class="accordion" id="surgeriesAccordion">
+    {% for item in surgery_hierarchy %}
+        {% set surgery = item.parent %}
+        <div class="accordion-item mb-2 shadow-sm">
+            <!-- Accordion Header -->
+            <h2 class="accordion-header" id="heading{{ surgery.id }}">
+                <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" 
+                        data-bs-toggle="collapse" data-bs-target="#collapse{{ surgery.id }}" 
+                        aria-expanded="{% if loop.first %}true{% else %}false{% endif %}" 
+                        aria-controls="collapse{{ surgery.id }}">
+                    <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                        <div>
+                            <strong class="me-2">{{ surgery.surgery_date.strftime('%b %d, %Y') }}</strong>
+                            {% if surgery.procedure_type %}
+                                <span class="badge badge-procedure me-2">
+                                    {% if surgery.side %}{{ surgery.side }} {% endif %}{{ surgery.procedure_type.name }}
+                                </span>
                             {% endif %}
-                        {% else %}
-                            <span class="text-muted">—</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ surgery.surgeon.name if surgery.surgeon else '—' }}</td>
-                    <td>{{ surgery.hospital.name if surgery.hospital else '—' }}</td>
-                    <td>
-                        <span class="badge bg-light text-dark border">{{ surgery.implants|length }} implant{% if surgery.implants|length != 1 %}s{% endif %}</span>
-                    </td>
-                    <td class="text-end">
+                            
+                            {% if surgery.surgery_status == 'Revised' %}
+                                <span class="badge bg-warning text-dark">Revised</span>
+                            {% endif %}
+                            
+                            {% if item.children %}
+                                <span class="badge bg-info text-dark ms-2">{{ item.children|length }} minor revision{% if item.children|length != 1 %}s{% endif %}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="text-end small text-muted">
+                            {{ surgery.surgeon.name if surgery.surgeon else '—' }} 
+                            {% if surgery.hospital %}· {{ surgery.hospital.name }}{% endif %}
+                        </div>
+                    </div>
+                </button>
+            </h2>
+
+            <!-- Accordion Body -->
+            <div id="collapse{{ surgery.id }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" 
+                 aria-labelledby="heading{{ surgery.id }}" data-bs-parent="#surgeriesAccordion">
+                <div class="accordion-body pt-2">
+                    
+                    <!-- Parent Surgery Quick Actions -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="badge bg-light text-dark border me-2">
+                                {{ surgery.implants|length }} implant{% if surgery.implants|length != 1 %}s{% endif %}
+                            </span>
+                            {% if surgery.outpatient %}
+                                <span class="badge bg-success">Outpatient</span>
+                            {% endif %}
+                        </div>
+                        
                         <div class="btn-group btn-group-sm">
                             <a href="{{ url_for('surgery_detail', surgery_id=surgery.id) }}" class="btn btn-primary">
-                                <i class="bi bi-eye me-1"></i> View
+                                <i class="bi bi-eye me-1"></i> View Details
                             </a>
                             <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editSurgeryModal{{ surgery.id }}">
-                                <i class="bi bi-pencil"></i>
+                                <i class="bi bi-pencil me-1"></i> Edit
                             </button>
                             <form id="deleteSurgery{{ surgery.id }}" action="{{ url_for('delete_surgery', surgery_id=surgery.id) }}" method="POST" class="d-inline">
                                 <button type="button" class="btn btn-outline-danger" onclick="confirmDelete('deleteSurgery{{ surgery.id }}', 'surgery and its implants')">
@@ -115,12 +125,46 @@
                                 </button>
                             </form>
                         </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+                    </div>
+
+                    <!-- Minor Revisions -->
+                    {% if item.children %}
+                        <div class="border-start border-3 border-secondary ps-3 ms-2">
+                            <div class="text-muted small mb-2 fw-semibold">MINOR REVISIONS</div>
+                            
+                            {% for child in item.children %}
+                            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                <div>
+                                    <span class="text-muted me-2">↳</span>
+                                    <strong>{{ child.surgery_date.strftime('%b %d, %Y') }}</strong>
+                                    <span class="badge bg-secondary ms-2">Minor Revision</span>
+                                    
+                                    {% if child.procedure_type %}
+                                        <span class="badge badge-procedure ms-2">
+                                            {{ child.procedure_type.name }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('surgery_detail', surgery_id=child.id) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editSurgeryModal{{ child.id }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-muted small fst-italic">No minor revisions recorded.</div>
+                    {% endif %}
+                    
+                </div>
+            </div>
+        </div>
+    {% endfor %}
 </div>
 {% else %}
 <div class="card">

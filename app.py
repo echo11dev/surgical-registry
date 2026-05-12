@@ -816,14 +816,36 @@ def add_patient():
 
 @app.route('/patients/<int:patient_id>')
 def patient_detail(patient_id):
-    """View patient details and their surgeries"""
+    """View patient details and their surgeries with hierarchical display for minor revisions"""
     patient = Patient.query.get_or_404(patient_id)
-    surgeries = Surgery.query.filter_by(patient_id=patient_id).order_by(Surgery.surgery_date.desc()).all()
+    all_surgeries = Surgery.query.filter_by(patient_id=patient_id).order_by(Surgery.surgery_date.desc()).all()
+
+    # Build hierarchy: parent surgery -> list of minor revisions
+    children_map = {}
+    top_level = []
+
+    for s in all_surgeries:
+        if s.parent_surgery_id:
+            if s.parent_surgery_id not in children_map:
+                children_map[s.parent_surgery_id] = []
+            children_map[s.parent_surgery_id].append(s)
+        else:
+            top_level.append(s)
+
+    # Attach children to their parents (only for display)
+    surgery_hierarchy = []
+    for parent in top_level:
+        surgery_hierarchy.append({
+            'parent': parent,
+            'children': children_map.get(parent.id, [])
+        })
+
     lookups = get_all_lookups()
     
     return render_template('patient_detail.html', 
                           patient=patient, 
-                          surgeries=surgeries,
+                          surgeries=all_surgeries,           # Flat list for modals and other uses
+                          surgery_hierarchy=surgery_hierarchy,
                           lookups=lookups)
 
 @app.route('/patients/<int:patient_id>/edit', methods=['POST'])
