@@ -8,6 +8,7 @@ with lookup tables for standardized data.
 import os
 import csv
 import io
+import zipfile
 from datetime import datetime, date
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
@@ -1507,13 +1508,14 @@ def save_complications(surgery_id):
 # ---------- REPORTS & CSV EXPORTS ----------
 @app.route('/reports')
 def reports():
-    """Reports dashboard with CSV export options"""
+    """Reports dashboard with CSV export options - redesigned for UM Arthroplasty Registry v1.1"""
     stats = {
         'patients': Patient.query.count(),
         'surgeries': Surgery.query.count(),
         'implants': Implant.query.count(),
     }
-    return render_template('reports.html', stats=stats)
+    lookups = get_all_lookups()
+    return render_template('reports.html', stats=stats, **lookups)
 
 
 @app.route('/reports/export/patients')
@@ -1603,6 +1605,285 @@ def export_implants_csv():
 
     output = make_response(si.getvalue())
     output.headers["Content-Disposition"] = "attachment; filename=um_registry_implants.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
+
+
+# ---------- REDESIGNED REPORTS: Backup + Filtered Exports (v1.1) ----------
+
+@app.route('/reports/export/full_backup')
+def export_full_backup():
+    """Generate a complete ZIP backup of the registry (Patients, Surgeries with complications, Implants).
+    This is the primary 'Backup (all data)' option for archiving and research data sharing.
+    """
+    memory_file = io.BytesIO()
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # 1. Patients
+        si = io.StringIO()
+        cw = csv.writer(si)
+        cw.writerow(['MRN', 'First Name', 'Last Name', 'Date of Birth', 'Sex', 'Age', 'Weight (kg)', 'Height (cm)', 'BMI', 'Race', 'Ethnicity', 'Phone', 'Email', 'Created At'])
+        for p in Patient.query.order_by(Patient.last_name, Patient.first_name).all():
+            cw.writerow([
+                p.mrn, p.first_name, p.last_name,
+                p.dob.isoformat() if p.dob else '',
+                p.sex or '', p.age,
+                p.weight_kg or '', p.height_cm or '', p.bmi or '',
+                p.race or '', p.ethnicity or '',
+                p.phone or '', p.email or '',
+                p.created_at.isoformat() if p.created_at else ''
+            ])
+        zf.writestr('01_patients.csv', si.getvalue())
+
+        # 2. Surgeries (enhanced with outpatient, elixhauser, complications JSON for research)
+        si = io.StringIO()
+        cw = csv.writer(si)
+        cw.writerow(['Surgery ID', 'Patient MRN', 'Patient Name', 'Surgery Date', 'Procedure Type (Standardized)', 'Joint', 'Side', 'Surgery Type', 'Revision Reason', 'Surgeon', 'Hospital', 'Outpatient', 'Elixhauser Score', 'Complications (JSON)', 'Notes', 'Created At'])
+        for s in Surgery.query.order_by(Surgery.surgery_date.desc()).all():
+            comp_json = str(s.complications) if s.complications else '{}'
+            cw.writerow([
+                s.id,
+                s.patient.mrn if s.patient else '',
+                s.patient.full_name if s.patient else '',
+                s.surgery_date.isoformat() if s.surgery_date else '',
+                s.procedure_type.name if s.procedure_type else '',
+                s.joint or '', s.side or '', s.surgery_type or '', s.revision_reason or '',
+                s.surgeon.name if s.surgeon else '',
+                s.hospital.name if s.hospital else '',
+                'Yes' if s.outpatient else 'No',
+                s.elixhauser_score or 0,
+                comp_json,
+                (s.notes or '').replace('\n', ' ').strip(),
+                s.created_at.isoformat() if s.created_at else ''
+            ])
+        zf.writestr('02_surgeries.csv', si.getvalue())
+
+        # 3. Implants
+        si = io.StringIO()
+        cw = csv.writer(si)
+        cw.writerow(['Implant ID', 'Surgery ID', 'Patient MRN', 'Surgery Date', 'Implant Type', 'Manufacturer', 'Reference Number', 'Size', 'Lot Number', 'Notes'])
+        for imp in Implant.query.order_by(Implant.created_at.desc()).all():
+            s = imp.surgery
+            cw.writerow([
+                imp.id,
+                s.id if s else '',
+                s.patient.mrn if s and s.patient else '',
+                s.surgery_date.isoformat() if s and s.surgery_date else '',
+                imp.implant_type.name if imp.implant_type else '',
+                imp.manufacturer.name if imp.manufacturer else '',
+                imp.reference_number or '',
+                imp.size or '',
+                imp.lot_number or '',
+                (imp.notes or '').replace('\n', ' ').strip()
+            ])
+        zf.writestr('03_implants.csv', si.getvalue())
+
+    memory_file.seek(0)
+    response = make_response(memory_file.read())
+    response.headers["Content-Disposition"] = "attachment; filename=UM_Arthroplasty_Registry_Full_Backup_20260512.zip"
+    response.headers["Content-type"] = "application/zip"
+    return response
+
+
+@app.route('/reports/export/by_date')
+def export_by_date():
+    """Export surgeries or implants filtered by surgery date range. Supports 'surgeries', 'implants', or 'full' (ZIP)."""
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    export_type = request.args.get('export_type', 'surgeries')
+
+    if not start_date_str or not end_date_str:
+        flash('Start date and end date are required for date-range reports.', 'warning')
+        return redirect(url_for('reports'))
+
+    try:
+        start_date = date.fromisoformat(start_date_str)
+        end_date = date.fromisoformat(end_date_str)
+    except ValueError:
+        flash('Invalid date format. Please use YYYY-MM-DD.', 'danger')
+        return redirect(url_for('reports'))
+
+    if export_type == 'surgeries':
+        si = io.StringIO()
+        cw = csv.writer(si)
+        cw.writerow(['Surgery ID', 'Patient MRN', 'Patient Name', 'Surgery Date', 'Procedure Type', 'Joint', 'Side', 'Surgery Type', 'Surgeon', 'Hospital', 'Outpatient', 'Complication Count (Yes)', 'Notes'])
+        surgeries = Surgery.query.filter(
+            Surgery.surgery_date >= start_date,
+            Surgery.surgery_date <= end_date
+        ).order_by(Surgery.surgery_date.desc()).all()
+        for s in surgeries:
+            comp_count = sum(1 for v in (s.complications or {}).values() if str(v).lower() == 'yes') if s.complications else 0
+            cw.writerow([
+                s.id,
+                s.patient.mrn if s.patient else '',
+                s.patient.full_name if s.patient else '',
+                s.surgery_date.isoformat() if s.surgery_date else '',
+                s.procedure_type.name if s.procedure_type else '',
+                s.joint or '', s.side or '', s.surgery_type or '',
+                s.surgeon.name if s.surgeon else '',
+                s.hospital.name if s.hospital else '',
+                'Yes' if s.outpatient else 'No',
+                comp_count,
+                (s.notes or '').replace('\n', ' ').strip()
+            ])
+        output = make_response(si.getvalue())
+        output.headers["Content-Disposition"] = f"attachment; filename=UM_Surgeries_{start_date_str}_to_{end_date_str}.csv"
+        output.headers["Content-type"] = "text/csv"
+        return output
+
+    elif export_type == 'implants':
+        si = io.StringIO()
+        cw = csv.writer(si)
+        cw.writerow(['Implant ID', 'Surgery Date', 'Patient MRN', 'Patient Name', 'Procedure', 'Implant Type', 'Manufacturer', 'Reference #', 'Size', 'Lot Number'])
+        implants = db.session.query(Implant).join(Surgery).filter(
+            Surgery.surgery_date >= start_date,
+            Surgery.surgery_date <= end_date
+        ).order_by(Surgery.surgery_date.desc()).all()
+        for imp in implants:
+            s = imp.surgery
+            cw.writerow([
+                imp.id,
+                s.surgery_date.isoformat() if s and s.surgery_date else '',
+                s.patient.mrn if s and s.patient else '',
+                s.patient.full_name if s and s.patient else '',
+                s.procedure_type.name if s and s.procedure_type else '',
+                imp.implant_type.name if imp.implant_type else '',
+                imp.manufacturer.name if imp.manufacturer else '',
+                imp.reference_number or '',
+                imp.size or '',
+                imp.lot_number or ''
+            ])
+        output = make_response(si.getvalue())
+        output.headers["Content-Disposition"] = f"attachment; filename=UM_Implants_{start_date_str}_to_{end_date_str}.csv"
+        output.headers["Content-type"] = "text/csv"
+        return output
+
+    elif export_type == 'full':
+        # Filtered full backup ZIP for the date range
+        memory_file = io.BytesIO()
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            # Filtered Surgeries
+            si = io.StringIO()
+            cw = csv.writer(si)
+            cw.writerow(['Surgery ID', 'Patient MRN', 'Patient Name', 'Surgery Date', 'Procedure Type', 'Joint', 'Side', 'Surgery Type', 'Surgeon', 'Outpatient', 'Complication Count', 'Notes'])
+            surgeries = Surgery.query.filter(Surgery.surgery_date >= start_date, Surgery.surgery_date <= end_date).order_by(Surgery.surgery_date.desc()).all()
+            for s in surgeries:
+                comp_count = sum(1 for v in (s.complications or {}).values() if str(v).lower() == 'yes') if s.complications else 0
+                cw.writerow([s.id, s.patient.mrn if s.patient else '', s.patient.full_name if s.patient else '', s.surgery_date.isoformat() if s.surgery_date else '', s.procedure_type.name if s.procedure_type else '', s.joint or '', s.side or '', s.surgery_type or '', s.surgeon.name if s.surgeon else '', 'Yes' if s.outpatient else 'No', comp_count, (s.notes or '').replace('\n',' ').strip()])
+            zf.writestr(f'filtered_surgeries_{start_date_str}_to_{end_date_str}.csv', si.getvalue())
+
+            # Filtered Implants for those surgeries
+            si = io.StringIO()
+            cw = csv.writer(si)
+            cw.writerow(['Implant ID', 'Surgery Date', 'Patient MRN', 'Implant Type', 'Manufacturer', 'Reference #', 'Size', 'Lot Number'])
+            implants = db.session.query(Implant).join(Surgery).filter(Surgery.surgery_date >= start_date, Surgery.surgery_date <= end_date).all()
+            for imp in implants:
+                s = imp.surgery
+                cw.writerow([imp.id, s.surgery_date.isoformat() if s else '', s.patient.mrn if s and s.patient else '', imp.implant_type.name if imp.implant_type else '', imp.manufacturer.name if imp.manufacturer else '', imp.reference_number or '', imp.size or '', imp.lot_number or ''])
+            zf.writestr(f'filtered_implants_{start_date_str}_to_{end_date_str}.csv', si.getvalue())
+
+        memory_file.seek(0)
+        response = make_response(memory_file.read())
+        response.headers["Content-Disposition"] = f"attachment; filename=UM_Registry_Filtered_{start_date_str}_to_{end_date_str}.zip"
+        response.headers["Content-type"] = "application/zip"
+        return response
+
+    flash('Unknown export type for date filter.', 'danger')
+    return redirect(url_for('reports'))
+
+
+@app.route('/reports/export/by_surgeon')
+def export_by_surgeon():
+    """Export all cases (surgeries +/- implants) for a specific surgeon. Useful for individual surgeon QI and research."""
+    surgeon_id = request.args.get('surgeon_id', type=int)
+    include_implants = request.args.get('include_implants') == 'yes'
+
+    if not surgeon_id:
+        flash('Please select a surgeon for the report.', 'warning')
+        return redirect(url_for('reports'))
+
+    surgeon = Surgeon.query.get_or_404(surgeon_id)
+
+    si = io.StringIO()
+    cw = csv.writer(si)
+
+    if include_implants:
+        cw.writerow(['Surgery ID', 'Surgery Date', 'Patient MRN', 'Patient Name', 'Procedure Type', 'Joint / Side', 'Implant Type', 'Manufacturer', 'Reference #', 'Size', 'Lot Number', 'Surgery Notes'])
+        surgeries = Surgery.query.filter_by(surgeon_id=surgeon_id).order_by(Surgery.surgery_date.desc()).all()
+        for s in surgeries:
+            if s.implants:
+                for imp in s.implants:
+                    cw.writerow([
+                        s.id, s.surgery_date.isoformat() if s.surgery_date else '',
+                        s.patient.mrn if s.patient else '', s.patient.full_name if s.patient else '',
+                        s.procedure_type.name if s.procedure_type else '',
+                        f"{s.joint or ''} {s.side or ''}",
+                        imp.implant_type.name if imp.implant_type else '',
+                        imp.manufacturer.name if imp.manufacturer else '',
+                        imp.reference_number or '', imp.size or '', imp.lot_number or '',
+                        (s.notes or '').replace('\n', ' ').strip()
+                    ])
+            else:
+                cw.writerow([s.id, s.surgery_date.isoformat() if s.surgery_date else '', s.patient.mrn if s.patient else '', s.patient.full_name if s.patient else '', s.procedure_type.name if s.procedure_type else '', f"{s.joint or ''} {s.side or ''}", '', '', '', '', '', (s.notes or '').replace('\n', ' ').strip()])
+    else:
+        cw.writerow(['Surgery ID', 'Surgery Date', 'Patient MRN', 'Patient Name', 'Procedure Type', 'Joint', 'Side', 'Surgery Type', 'Outpatient', 'Elixhauser Score', 'Complication Count (Yes)', 'Notes'])
+        for s in Surgery.query.filter_by(surgeon_id=surgeon_id).order_by(Surgery.surgery_date.desc()).all():
+            comp_count = sum(1 for v in (s.complications or {}).values() if str(v).lower() == 'yes') if s.complications else 0
+            cw.writerow([
+                s.id, s.surgery_date.isoformat() if s.surgery_date else '',
+                s.patient.mrn if s.patient else '', s.patient.full_name if s.patient else '',
+                s.procedure_type.name if s.procedure_type else '',
+                s.joint or '', s.side or '', s.surgery_type or '',
+                'Yes' if s.outpatient else 'No',
+                s.elixhauser_score or 0,
+                comp_count,
+                (s.notes or '').replace('\n', ' ').strip()
+            ])
+
+    output = make_response(si.getvalue())
+    safe_name = surgeon.name.replace(' ', '_').replace('.', '').replace(',', '')
+    output.headers["Content-Disposition"] = f"attachment; filename=UM_Surgeon_{safe_name}_Report.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
+
+
+@app.route('/reports/export/by_implant')
+def export_by_implant():
+    """Export implant usage report filtered by manufacturer and/or implant type. Critical for tracking specific devices, recalls, or outcomes by implant."""
+    manufacturer_id = request.args.get('manufacturer_id', type=int)
+    implant_type_id = request.args.get('implant_type_id', type=int)
+
+    query = Implant.query
+    if manufacturer_id:
+        query = query.filter(Implant.manufacturer_id == manufacturer_id)
+    if implant_type_id:
+        query = query.filter(Implant.implant_type_id == implant_type_id)
+
+    implants = query.order_by(Implant.created_at.desc()).all()
+
+    si = io.StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['Implant ID', 'Surgery Date', 'Patient MRN', 'Patient Name', 'Procedure Type', 'Implant Type', 'Manufacturer', 'Reference Number', 'Size', 'Lot Number', 'Surgery Hospital', 'Surgery Notes'])
+    for imp in implants:
+        s = imp.surgery
+        cw.writerow([
+            imp.id,
+            s.surgery_date.isoformat() if s and s.surgery_date else '',
+            s.patient.mrn if s and s.patient else '',
+            s.patient.full_name if s and s.patient else '',
+            s.procedure_type.name if s and s.procedure_type else '',
+            imp.implant_type.name if imp.implant_type else '',
+            imp.manufacturer.name if imp.manufacturer else '',
+            imp.reference_number or '',
+            imp.size or '',
+            imp.lot_number or '',
+            s.hospital.name if s and s.hospital else '',
+            (s.notes or '').replace('\n', ' ').strip() if s else ''
+        ])
+
+    output = make_response(si.getvalue())
+    mfg_name = Manufacturer.query.get(manufacturer_id).name.replace(' ', '_') if manufacturer_id else 'AllMfr'
+    it_name = ImplantType.query.get(implant_type_id).name.replace(' ', '_')[:30] if implant_type_id else 'AllTypes'
+    output.headers["Content-Disposition"] = f"attachment; filename=UM_Implant_Report_{mfg_name}_{it_name}.csv"
     output.headers["Content-type"] = "text/csv"
     return output
 

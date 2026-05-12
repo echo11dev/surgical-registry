@@ -75,6 +75,11 @@ All foreign keys are properly indexed and relationships use SQLAlchemy ORM with 
 - `/patients/<id>` — Patient detail + surgeries list + add surgery
 - `/surgeries/<id>` — Surgery detail + implants list + add/edit implants
 - `/lookups` — Manage all lookup tables (add/delete entries)
+- `/reports` — **Redesigned Reports & Exports page** (v1.1.1)
+  - Full Registry Backup (ZIP containing 3 standardized CSVs)
+  - Specific reports filtered by **Date Range**, **Surgeon**, or **Implant/Manufacturer**
+  - All exports downloadable as CSV (or ZIP for backups)
+  - Includes complication counts and structured data aligned with Hip/Knee Society standards
 
 ## Notes
 
