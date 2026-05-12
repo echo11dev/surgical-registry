@@ -204,7 +204,7 @@
                                 <strong>Important:</strong> Does this revision involve exchanging of major components (femoral/acetabular for hip, femoral/tibial for knee)?
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="revision_major_components" id="major_yes" value="true">
+                                <input class="form-check-input" type="radio" name="revision_major_components" id="major_yes" value="true" required>
                                 <label class="form-check-label" for="major_yes">Yes - Major components exchanged</label>
                             </div>
                             <div class="form-check form-check-inline">
@@ -364,9 +364,17 @@
 function toggleRevisionReason(select) {
     // Support both add form and edit modals
     const form = select.closest('form');
-    let group = form ? form.querySelector('#revision_reason_group, #revision_reason_edit_group') : document.getElementById('revision_reason_group');
-    if (group) {
-        group.style.display = (select.value === 'Revision') ? 'block' : 'none';
+    
+    // Toggle Revision Reason/Type group
+    let reasonGroup = form ? form.querySelector('#revision_reason_group, #revision_reason_edit_group') : document.getElementById('revision_reason_group');
+    if (reasonGroup) {
+        reasonGroup.style.display = (select.value === 'Revision') ? 'block' : 'none';
+    }
+
+    // Toggle Major Component Question group
+    let majorGroup = form ? form.querySelector('#major_component_group') : document.getElementById('major_component_group');
+    if (majorGroup) {
+        majorGroup.style.display = (select.value === 'Revision') ? 'block' : 'none';
     }
 }
 

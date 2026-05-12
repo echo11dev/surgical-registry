@@ -1212,7 +1212,7 @@ function openAddImplantForComponent(implantTypeName) {
                                 <strong>Important:</strong> Does this revision involve exchanging of major components (femoral/acetabular for hip, femoral/tibial for knee)?
                             </div>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="revision_major_components" id="edit_major_yes" value="true" {% if surgery.revision_major_components %}checked{% endif %}>
+                                <input class="form-check-input" type="radio" name="revision_major_components" id="edit_major_yes" value="true" {% if surgery.revision_major_components %}checked{% endif %} required>
                                 <label class="form-check-label" for="edit_major_yes">Yes - Major components exchanged</label>
                             </div>
                             <div class="form-check form-check-inline">
