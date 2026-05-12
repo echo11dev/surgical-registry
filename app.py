@@ -968,12 +968,9 @@ def add_surgery():
             flash('Could not calculate Procedure Type. Ensure all fields (including Primary Type for Primary surgeries) are selected.', 'danger')
             return redirect(request.referrer or url_for('patients_list'))
 
-        # === Quality Safeguard Logic (with debug) ===
+        # === Quality Safeguard Logic ===
         revision_major_str = request.form.get('revision_major_components')
         revision_major_components = None
-
-        # Temporary debug - will appear in Render logs
-        print(f"[DEBUG] surgery_type={surgery_type}, revision_major_str={revision_major_str}")
 
         if surgery_type == 'Revision':
             if not revision_major_str:
@@ -1022,7 +1019,6 @@ def add_surgery():
                     db.session.add(previous_surgery)
                 surgery.parent_surgery_id = previous_surgery.id if previous_surgery else None
                 flash('Major revision recorded. Previous surgery marked as Revised.', 'info')
-                print(f"[DEBUG] MAJOR REVISION detected. Previous surgery ID={previous_surgery.id if previous_surgery else None} marked as Revised.")
 
             elif revision_major_components is False:
                 # No major components → Link as child (simplified revision)
