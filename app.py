@@ -1013,11 +1013,11 @@ def add_surgery():
             ).order_by(Surgery.surgery_date.desc()).first()
 
             if revision_major_components is True:
-                # Major component revision → New surgery + close previous
+                # Major component revision → New independent surgery + mark previous as Revised
                 if previous_surgery:
                     previous_surgery.surgery_status = 'Revised'
                     db.session.add(previous_surgery)
-                surgery.parent_surgery_id = previous_surgery.id if previous_surgery else None
+                # Do NOT set parent_surgery_id for major revisions (they are independent)
                 flash('Major revision recorded. Previous surgery marked as Revised.', 'info')
 
             elif revision_major_components is False:
