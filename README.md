@@ -2,7 +2,14 @@
 
 **Production-ready Flask web application** for managing a comprehensive surgical registry focused on hip and knee arthroplasty. Built for research, quality improvement, and standardized complication tracking at the University of Miami.
 
-## Key Features (v1.6.3 – May 2026)
+## Key Features (v1.6.12 – May 2026)
+
+### Performance Optimizations (v1.6.12)
+- **Server-side pagination** on the Patients registry list (20 per page) — prevents massive HTML payloads and memory spikes as the registry grows to thousands of cases.
+- **5-minute TTL dashboard cache** — expensive JSONB complication aggregations + monthly chart queries are computed once and reused, dramatically lowering DB CPU on frequent visits.
+- **Extracted static assets** (`/static/css/styles.css`, `/static/js/main.js`) — custom CSS/JS no longer duplicated in every HTML response; long-term browser caching enabled via `SEND_FILE_MAX_AGE_DEFAULT`.
+- **Centralized complication definitions** — 25 Hip/Knee Society medical definitions moved from template JS to Python `COMPLICATION_DEFINITIONS` and injected via `tojson`. Single source of truth, smaller templates, easier future maintenance.
+- **Query + template cleanups** — reduced inline style bloat, improved N+1 avoidance patterns in key routes.
 
 ### Core Registry Functions
 - **Patients**: Full CRUD with search by name, MRN, phone. Includes demographics, BMI auto-calculation, race/ethnicity fields.

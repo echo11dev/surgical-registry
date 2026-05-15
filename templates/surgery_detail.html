@@ -368,13 +368,13 @@
                     </div>
 
                     <!-- 2. HIP-SPECIFIC COMPLICATIONS -->
+                    {% if surgery.joint and surgery.joint.lower() == 'hip' %}
                     <div class="mb-4">
                         <div class="d-flex align-items-center mb-2 pb-1 border-bottom border-primary">
                             <h6 class="mb-0 text-primary"><i class="bi bi-broadcast-pin me-2"></i>Hip-Specific Complications</h6>
                             <span class="badge bg-primary ms-auto">3 items</span>
                         </div>
                         <div class="row g-2">
-                            {% if surgery.joint == 'Hip' %}
                             {% set hip_complications = [
                                 ('abductor_muscle_disruption', 'Abductor Muscle Disruption'),
                                 ('heterotopic_ossification', 'Heterotopic Ossification'),
@@ -401,13 +401,13 @@
                                 </div>
                             </div>
                             {% endfor %}
-                            {% endif %}
                         </div>
                         <div class="small text-muted mt-1">Note: "Instability / Dislocation" is listed under General Complications (applies to both hip and knee with procedure-specific definitions).</div>
                     </div>
+                    {% endif %}
 
                     <!-- 3. KNEE-SPECIFIC COMPLICATIONS -->
-                    {% if surgery.joint == 'Knee' %}
+                    {% if surgery.joint and surgery.joint.lower() == 'knee' %}
                     <div class="mb-4">
                         <div class="d-flex align-items-center mb-2 pb-1 border-bottom border-success">
                             <h6 class="mb-0 text-success"><i class="bi bi-shield-check me-2"></i>Knee-Specific Complications</h6>
@@ -521,34 +521,9 @@
     </div>
 
     <script>
-        // Comprehensive definitions from The Hip Society (THA 2015) and The Knee Society (TKA 2013)
-        const complicationDefinitions = {
-            'bleeding': 'Postoperative bleeding requiring surgical treatment. (ICD-9 998.11)<br><br>Stratification: Grade 3–5 depending on severity and need for reoperation or transfusion.',
-            'wound_complication': 'Failure of wound healing requiring reoperation or a change in TKA/THA protocol. (ICD-9 998.32)<br><br>Includes dehiscence, hematoma requiring evacuation, or persistent drainage. Suture/staple erythema alone is NOT a complication.',
-            'thromboembolic_disease': 'Symptomatic thromboembolic event (DVT or PE) requiring more intensive, nonprophylactic anticoagulant or antithrombotic treatment during the first 3 months after index procedure. (ICD-9 453.40)',
-            'neural_deficit': 'Postoperative neural deficit (sensory or motor) related to the index procedure. (ICD-9 997.09)<br><br>Record if complete recovery or permanent disability. Stratification: Grade 1–3 if recovers; Grade 4 if permanent.',
-            'vascular_injury': 'Intraoperative vascular injury requiring surgical repair, bypass grafting, or stenting. Compartment syndrome or amputation should be reported separately. (ICD-9 997.20)',
-            'deep_periprosthetic_joint_infection': 'Deep periprosthetic joint infection diagnosed when: (1) sinus tract communicates with prosthesis, or (2) pathogen isolated from ≥2 separate tissue/fluid samples, or (3) 4 of 6 criteria met (elevated ESR + CRP, elevated synovial WBC, elevated synovial PMN%, purulence, single positive culture, or >5 neutrophils/HPF on histology at ×400). (ICD-9 996.66)<br><br>Reference: Musculoskeletal Infection Society (MSIS) / Parvizi criteria.',
-            'periprosthetic_fracture': 'Periprosthetic fracture of the distal femur, proximal tibia, or patella (knee) OR proximal femur or acetabulum (hip). Record whether intraoperative or postoperative and operative vs nonoperative treatment. (ICD-9 996.44)',
-            'bearing_surface_wear': 'Wear of the bearing surface that is symptomatic or requires reoperation/revision. (ICD-9 996.46)<br><br>Normal expected wear is NOT recorded; only symptomatic or reoperation-requiring wear.',
-            'osteolysis': 'Expansile lytic lesion adjacent to one of the implants that is ≥1 cm in any dimension or increasing in size on serial radiographs or CT scans. (ICD-9 996.45)',
-            'implant_loosening': 'Implant loosening confirmed intraoperatively OR identified radiographically as change in implant position or progressive radiolucent line at bone-cement or bone-implant interface. (ICD-9 996.41)',
-            'implant_fracture_tibial_insert_dissociation': 'Implant fracture (specific component recorded) OR dissociation of the tibial insert from the tibial baseplate (knee) / cup-liner issues are separate. (ICD-9 996.43)',
-            'abductor_muscle_disruption': 'Symptomatic abductor dysfunction not present preoperatively, associated with positive Trendelenburg sign and use of ambulatory assist (cane/crutch/walker) for limp or weakness. Record nonoperative vs operative treatment. (ICD-9 727.69)',
-            'heterotopic_ossification': 'Symptomatic heterotopic ossification at 1 year post-op associated with stiffness/reduced ROM and radiographic Brooker grade III or IV. (ICD-9 728.13)',
-            'cup_liner_dissociation': 'Dissociation of the acetabular liner from the acetabular shell. (ICD-9 996.47)',
-            'medial_collateral_ligament_injury': 'Intraoperative or early postoperative MCL injury requiring repair, reconstruction, change in prosthetic constraint, revision, or change in TKA protocol. (ICD-9 844.10)',
-            'instability': 'For Hip: Dislocation of femoral head out of acetabulum or recurrent symptomatic subluxation (record direction & treatment). For Knee: Symptomatic instability confirmed by laxity on exam per Knee Society Knee Score. (ICD-9 996.42)',
-            'malalignment': 'Symptomatic malalignment reported by patient and confirmed radiographically with coronal angular deformity >10° from mechanical axis. (No ICD-9 in original list)',
-            'stiffness': 'Limited ROM reported by patient and confirmed on exam: extension limited to ≥15° short of full extension OR flexion <90° (not applicable if preoperative arc of motion <75°). (ICD-9 719.56)',
-            'extensor_mechanism_disruption': 'Disruption of the extensor mechanism (quadriceps tendon, patellar tendon, or patella fracture). Record surgical repair performed and/or extensor lag. (ICD-9 729.65 / 727.66)',
-            'patellofemoral_dislocation': 'Dislocation of the patella from the femoral trochlea. Record direction of instability. (ICD-9 996.42)',
-            'tibiofemoral_dislocation': 'Dislocation of the tibiofemoral joint. Record direction of instability. (ICD-9 996.42)',
-            'reoperation': 'Return to the operating room related to the index procedure (reasons must be recorded). Does not include planned staged procedures.',
-            'readmission': 'Admission to hospital for any reason during the first 90 days after index procedure. Record reason and relation to index surgery. (Critical for CMS/public reporting)',
-            'revision': 'Removal or exchange of one or more of the implants (acetabular cup, liner, femoral head/stem for hip; femur, tibia, insert, patella for knee).',
-            'death': 'Death occurring for any reason during the first 90 days after index procedure. Record cause and relation to index surgery. (Grade 5 in stratification)'
-        };
+        // Centralized definitions injected from Python (COMPLICATION_DEFINITIONS in app.py)
+        // Single source of truth - easier to maintain & update standardized Hip/Knee Society text
+        const complicationDefinitions = {{ complication_definitions | tojson | safe }};
 
         // Show complication definition in modal
         function showComplicationInfo(element) {

@@ -37,8 +37,68 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,  # Helps with connection issues on free tiers
 }
 
+# Static asset caching (optimization): CSS/JS served with 1-year cache headers
+# Browser will not re-download on every page load. Use ?v= or filename hash for updates in prod.
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 365 days
+
 # Initialize SQLAlchemy
 db = SQLAlchemy(app)
+
+# ==================== SIMPLE TTL CACHE (Dashboard Optimization) ====================
+# In-memory cache for expensive dashboard aggregations (complication rates, charts, etc.)
+# 5-minute TTL dramatically reduces DB load on repeated visits without new dependencies.
+# In production with gunicorn (multi-worker), consider Redis or Flask-Caching + memcached.
+import time
+_dashboard_cache = {'data': None, 'ts': 0}
+DASHBOARD_CACHE_TTL = 300  # seconds
+
+def _get_cached_dashboard():
+    """Return cached dashboard payload if fresh, else None."""
+    now = time.time()
+    if _dashboard_cache['data'] and (now - _dashboard_cache['ts']) < DASHBOARD_CACHE_TTL:
+        return _dashboard_cache['data']
+    return None
+
+def _set_dashboard_cache(data):
+    """Store computed dashboard data."""
+    _dashboard_cache['data'] = data
+    _dashboard_cache['ts'] = time.time()
+
+def invalidate_dashboard_cache():
+    """Call after data mutations that affect dashboard stats (optional but recommended)."""
+    _dashboard_cache['data'] = None
+
+# ==================== COMPLICATION DEFINITIONS (Centralized for maintainability) ====================
+# Single source of truth for Hip/Knee Society standardized complication definitions.
+# Used both for server-side validation (future) and injected as JSON into surgery_detail.html
+# This removes ~2KB of medical text from the template and makes updates easier (no HTML edits needed).
+COMPLICATION_DEFINITIONS = {
+    'bleeding': 'Postoperative bleeding requiring surgical treatment. (ICD-9 998.11)<br><br>Stratification: Grade 3–5 depending on severity and need for reoperation or transfusion.',
+    'wound_complication': 'Failure of wound healing requiring reoperation or a change in TKA/THA protocol. (ICD-9 998.32)<br><br>Includes dehiscence, hematoma requiring evacuation, or persistent drainage. Suture/staple erythema alone is NOT a complication.',
+    'thromboembolic_disease': 'Symptomatic thromboembolic event (DVT or PE) requiring more intensive, nonprophylactic anticoagulant or antithrombotic treatment during the first 3 months after index procedure. (ICD-9 453.40)',
+    'neural_deficit': 'Postoperative neural deficit (sensory or motor) related to the index procedure. (ICD-9 997.09)<br><br>Record if complete recovery or permanent disability. Stratification: Grade 1–3 if recovers; Grade 4 if permanent.',
+    'vascular_injury': 'Intraoperative vascular injury requiring surgical repair, bypass grafting, or stenting. Compartment syndrome or amputation should be reported separately. (ICD-9 997.20)',
+    'deep_periprosthetic_joint_infection': 'Deep periprosthetic joint infection diagnosed when: (1) sinus tract communicates with prosthesis, or (2) pathogen isolated from ≥2 separate tissue/fluid samples, or (3) 4 of 6 criteria met (elevated ESR + CRP, elevated synovial WBC, elevated synovial PMN%, purulence, single positive culture, or >5 neutrophils/HPF on histology at ×400). (ICD-9 996.66)<br><br>Reference: Musculoskeletal Infection Society (MSIS) / Parvizi criteria.',
+    'periprosthetic_fracture': 'Periprosthetic fracture of the distal femur, proximal tibia, or patella (knee) OR proximal femur or acetabulum (hip). Record whether intraoperative or postoperative and operative vs nonoperative treatment. (ICD-9 996.44)',
+    'bearing_surface_wear': 'Wear of the bearing surface that is symptomatic or requires reoperation/revision. (ICD-9 996.46)<br><br>Normal expected wear is NOT recorded; only symptomatic or reoperation-requiring wear.',
+    'osteolysis': 'Expansile lytic lesion adjacent to one of the implants that is ≥1 cm in any dimension or increasing in size on serial radiographs or CT scans. (ICD-9 996.45)',
+    'implant_loosening': 'Implant loosening confirmed intraoperatively OR identified radiographically as change in implant position or progressive radiolucent line at bone-cement or bone-implant interface. (ICD-9 996.41)',
+    'implant_fracture_tibial_insert_dissociation': 'Implant fracture (specific component recorded) OR dissociation of the tibial insert from the tibial baseplate (knee) / cup-liner issues are separate. (ICD-9 996.43)',
+    'abductor_muscle_disruption': 'Symptomatic abductor dysfunction not present preoperatively, associated with positive Trendelenburg sign and use of ambulatory assist (cane/crutch/walker) for limp or weakness. Record nonoperative vs operative treatment. (ICD-9 727.69)',
+    'heterotopic_ossification': 'Symptomatic heterotopic ossification at 1 year post-op associated with stiffness/reduced ROM and radiographic Brooker grade III or IV. (ICD-9 728.13)',
+    'cup_liner_dissociation': 'Dissociation of the acetabular liner from the acetabular shell. (ICD-9 996.47)',
+    'medial_collateral_ligament_injury': 'Intraoperative or early postoperative MCL injury requiring repair, reconstruction, change in prosthetic constraint, revision, or change in TKA protocol. (ICD-9 844.10)',
+    'instability': 'For Hip: Dislocation of femoral head out of acetabulum or recurrent symptomatic subluxation (record direction & treatment). For Knee: Symptomatic instability confirmed by laxity on exam per Knee Society Knee Score. (ICD-9 996.42)',
+    'malalignment': 'Symptomatic malalignment reported by patient and confirmed radiographically with coronal angular deformity >10° from mechanical axis. (No ICD-9 in original list)',
+    'stiffness': 'Limited ROM reported by patient and confirmed on exam: extension limited to ≥15° short of full extension OR flexion <90° (not applicable if preoperative arc of motion <75°). (ICD-9 719.56)',
+    'extensor_mechanism_disruption': 'Disruption of the extensor mechanism (quadriceps tendon, patellar tendon, or patella fracture). Record surgical repair performed and/or extensor lag. (ICD-9 729.65 / 727.66)',
+    'patellofemoral_dislocation': 'Dislocation of the patella from the femoral trochlea. Record direction of instability. (ICD-9 996.42)',
+    'tibiofemoral_dislocation': 'Dislocation of the tibiofemoral joint. Record direction of instability. (ICD-9 996.42)',
+    'reoperation': 'Return to the operating room related to the index procedure (reasons must be recorded). Does not include planned staged procedures.',
+    'readmission': 'Admission to hospital for any reason during the first 90 days after index procedure. Record reason and relation to index surgery. (Critical for CMS/public reporting)',
+    'revision': 'Removal or exchange of one or more of the implants (acetabular cup, liner, femoral head/stem for hip; femur, tibia, insert, patella for knee).',
+    'death': 'Death occurring for any reason during the first 90 days after index procedure. Record cause and relation to index surgery. (Grade 5 in stratification)'
+}
 
 # ==================== MODELS ====================
 # Performance indexes added to Surgery, Implant, and Patient for:
@@ -80,6 +140,20 @@ class Surgeon(db.Model):
     name = db.Column(db.String(100), unique=True, nullable=False)
     specialty = db.Column(db.String(100))
     surgeries = db.relationship('Surgery', backref='surgeon', lazy=True)
+
+
+# === Joint Normalization Helper ===
+def normalize_joint(joint_value):
+    """Normalize joint value to 'Hip' or 'Knee' with consistent casing."""
+    if not joint_value:
+        return None
+    joint_lower = joint_value.strip().lower()
+    if joint_lower in ('hip', 'hips'):
+        return 'Hip'
+    elif joint_lower in ('knee', 'knees'):
+        return 'Knee'
+    return joint_value.strip()  # Return as-is if unrecognized
+
 
 class Patient(db.Model):
     __tablename__ = 'patients'
@@ -604,10 +678,16 @@ def dashboard():
     """Main dashboard with statistics and recent activity.
     
     Performance optimizations:
-    - Uses SQL aggregation + targeted column loading (load_only style via query)
+    - 5-minute TTL cache for all expensive aggregations (complication JSONB queries + monthly charts)
+    - Uses SQL aggregation + targeted column loading
     - Avoids loading full Surgery objects when possible
-    - Leverages new indexes on surgery_date, joint, surgery_type, surgeon_id, etc.
+    - Leverages indexes on surgery_date, joint, surgery_type, surgeon_id, etc.
     """
+    # Check TTL cache first (huge win on repeated dashboard loads)
+    cached = _get_cached_dashboard()
+    if cached:
+        return render_template('index.html', **cached)
+
     stats = {
         'patients': Patient.query.count(),
         'surgeries': Surgery.query.count(),
@@ -789,22 +869,29 @@ def dashboard():
             current = current.replace(month=current.month - 1)
     monthly_complication_rates.reverse()  # oldest → newest
     
-    return render_template('index.html', 
-                          stats=stats, 
-                          recent_surgeries=recent_surgeries,
-                          top_procedures=top_procedures,
-                          lookups=lookups,
-                          research_enrollment=research_enrollment,
-                          surgeries_by_year=surgeries_by_year,
-                          year_labels=year_labels,
-                          year_counts=year_counts,
-                          monthly_complication_rates=monthly_complication_rates)
+    # Build context and cache it for subsequent visitors (5 min)
+    context = {
+        'stats': stats,
+        'recent_surgeries': recent_surgeries,
+        'top_procedures': top_procedures,
+        'lookups': lookups,
+        'research_enrollment': research_enrollment,
+        'surgeries_by_year': surgeries_by_year,
+        'year_labels': year_labels,
+        'year_counts': year_counts,
+        'monthly_complication_rates': monthly_complication_rates
+    }
+    _set_dashboard_cache(context)
+    return render_template('index.html', **context)
 
 # ---------- PATIENTS ----------
 @app.route('/patients')
 def patients_list():
-    """List all patients with search"""
+    """List all patients with search + server-side pagination (critical optimization for large registries)"""
     search = request.args.get('search', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = 20  # Good balance of information density vs payload size
+
     query = Patient.query
     
     if search:
@@ -817,13 +904,19 @@ def patients_list():
             )
         )
     
-    patients = query.order_by(Patient.last_name, Patient.first_name).all()
+    # Use SQLAlchemy pagination (efficient LIMIT/OFFSET + separate COUNT)
+    pagination = query.order_by(Patient.last_name, Patient.first_name).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    patients = pagination.items
+
     lookups = get_all_lookups()
     
     return render_template('patients.html', 
                           patients=patients, 
                           search=search,
-                          lookups=lookups)
+                          lookups=lookups,
+                          pagination=pagination)  # Pagination object for pager UI + total count
 
 @app.route('/patients', methods=['POST'])
 def add_patient():
@@ -962,6 +1055,9 @@ def add_surgery():
 
         surgery_date = datetime.strptime(surgery_date_str, '%Y-%m-%d').date()
 
+        # === Joint Normalization ===
+        joint = normalize_joint(joint)
+
         # Calculate Procedure Type (and create if new name)
         proc = get_or_create_procedure_type(side, joint, surgery_type, primary_type)
         if not proc:
@@ -1058,7 +1154,8 @@ def surgery_detail(surgery_id):
                           implants=implants,
                           lookups=lookups,
                           research_projects=research_projects,
-                          missing_implants=missing_implants)
+                          missing_implants=missing_implants,
+                          complication_definitions=COMPLICATION_DEFINITIONS)  # Centralized medical definitions (JSON-injected)
 
 @app.route('/surgeries/<int:surgery_id>/edit', methods=['POST'])
 def edit_surgery(surgery_id):
@@ -1073,7 +1170,7 @@ def edit_surgery(surgery_id):
         surgery.notes = request.form.get('notes', '').strip() or None
 
         # Update ortho fields and recalculate procedure type
-        joint = request.form.get('joint') or surgery.joint
+        joint = normalize_joint(request.form.get('joint') or surgery.joint)
         side = request.form.get('side') or surgery.side
         surgery_type = request.form.get('surgery_type') or surgery.surgery_type
         revision_reason = request.form.get('revision_reason', '').strip() or surgery.revision_reason

@@ -7,89 +7,8 @@
     <!-- Bootstrap 5.3 CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #005030;      /* University of Miami Green */
-            --secondary-color: #FF6B00;    /* University of Miami Orange (accent) */
-            --um-navy: #002D62;
-        }
-        body {
-            background-color: #f8f9fa;
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-        }
-        .navbar-brand {
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            line-height: 1.1;
-        }
-        .btn-primary {
-            background-color: #005030;
-            border-color: #005030;
-            color: #ffffff;
-        }
-        .btn-primary:hover {
-            background-color: #003d24;
-            border-color: #003d24;
-            color: #ffffff;
-        }
-        .bg-primary {
-            background-color: #005030 !important;
-            color: #ffffff !important;
-        }
-        .text-primary {
-            color: #005030 !important;
-        }
-        .badge-procedure {
-            background-color: #e6f7ed;
-            color: #005030;
-            font-weight: 500;
-        }
-        .modal-header {
-            color: #ffffff;
-        }
-        .navbar-brand {
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-        .card {
-            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
-            border: none;
-        }
-        .table th {
-            background-color: #f1f3f5;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-        .stats-card {
-            transition: transform 0.2s ease;
-        }
-        .stats-card:hover {
-            transform: translateY(-3px);
-        }
-        .nav-link.active {
-            font-weight: 600;
-        }
-        .implant-row {
-            background-color: #f8f9fa;
-        }
-        .modal-header {
-            background: linear-gradient(135deg, #005030, #003d24);
-            color: white;
-        }
-        .section-header {
-            border-bottom: 3px solid #005030;
-            padding-bottom: 0.5rem;
-            margin-bottom: 1.5rem;
-        }
-        .data-table {
-            font-size: 0.925rem;
-        }
-        .badge-procedure {
-            background-color: #e6f7ed;
-            color: #00A651;
-            font-weight: 500;
-        }
-    </style>
+    <!-- Custom optimized styles (cached by browser, reduces HTML bloat on every page) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -190,25 +109,8 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Common JS -->
-    <script>
-        // Auto-dismiss alerts after 5 seconds (except persistent ones)
-        setTimeout(() => {
-            document.querySelectorAll('.alert:not(.alert-persistent)').forEach(alert => {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            });
-        }, 5000);
-
-        // Confirm delete actions
-        function confirmDelete(formId, entityName) {
-            if (confirm(`Are you sure you want to permanently delete this ${entityName}? This action cannot be undone.`)) {
-                document.getElementById(formId).submit();
-            }
-        }
-    </script>
-    
+    <!-- Shared app JS (cached, contains confirmDelete + alert handling) -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

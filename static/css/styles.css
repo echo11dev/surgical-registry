@@ -1,0 +1,110 @@
+/* University of Miami Hip & Knee Arthroplasty Registry - Custom Styles
+ * Extracted for better caching, maintainability, and smaller HTML payloads.
+ * Loaded from /static/css/styles.css with long-term browser caching.
+ */
+
+:root {
+    --primary-color: #005030;      /* University of Miami Green */
+    --secondary-color: #FF6B00;    /* University of Miami Orange (accent) */
+    --um-navy: #002D62;
+}
+
+body {
+    background-color: #f8f9fa;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+}
+
+.btn-primary {
+    background-color: #005030;
+    border-color: #005030;
+    color: #ffffff;
+}
+
+.btn-primary:hover {
+    background-color: #003d24;
+    border-color: #003d24;
+    color: #ffffff;
+}
+
+.bg-primary {
+    background-color: #005030 !important;
+    color: #ffffff !important;
+}
+
+.text-primary {
+    color: #005030 !important;
+}
+
+.badge-procedure {
+    background-color: #e6f7ed;
+    color: #00A651;
+    font-weight: 500;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+    border: none;
+}
+
+.table th {
+    background-color: #f1f3f5;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.stats-card {
+    transition: transform 0.2s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-3px);
+}
+
+.nav-link.active {
+    font-weight: 600;
+}
+
+.implant-row {
+    background-color: #f8f9fa;
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #005030, #003d24);
+    color: white;
+}
+
+.section-header {
+    border-bottom: 3px solid #005030;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.data-table {
+    font-size: 0.925rem;
+}
+
+/* Additional utility styles used across templates */
+.alert-persistent {
+    /* Do not auto-dismiss */
+}
+
+.complication-date {
+    margin-top: 0.25rem;
+}
+
+.info-icon:hover {
+    opacity: 0.8;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+    .stats-card .display-6 {
+        font-size: 1.5rem;
+    }
+}
